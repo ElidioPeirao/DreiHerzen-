@@ -31,6 +31,7 @@
                     <input type="password" id="password" required class="mt-1 block w-full border border-stone-300 rounded-md p-2">
                 </div>
                 <button type="submit" class="w-full bg-amber-800 text-white font-bold py-2 rounded-lg">Entrar</button>
+                <p id="login-error" class="text-red-500 text-sm mt-2 text-center"></p>
             </form>
         </div>
     </div>
@@ -113,7 +114,6 @@
         </div>
     </div>
     
-    <!-- NOTIFICAÇÕES -->
     <div id="admin-toast" class="toast fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl z-50 transform translate-y-20 opacity-0">
         <span id="toast-message"></span>
     </div>
@@ -128,7 +128,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
@@ -179,15 +178,12 @@
         const confirmOkBtn = document.getElementById('confirm-ok-btn');
         const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
         
-        // --- LÓGICA DE NOTIFICAÇÃO ---
         function showToast(message, isError = false) {
             toastMessage.textContent = message;
             adminToast.classList.toggle('bg-red-500', isError);
             adminToast.classList.toggle('bg-stone-800', !isError);
             adminToast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                adminToast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            setTimeout(() => adminToast.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
         function showConfirm(message, onConfirm) {
@@ -205,7 +201,6 @@
             confirmModal.classList.add('hidden');
         });
 
-        // --- LÓGICA GERAL ---
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginScreen.classList.add('hidden');
@@ -237,7 +232,92 @@
             loadProducts();
         }
 
-        // --- LÓGICA DE GESTÃO DE PEDIDOS ---
+        function renderOrders() {
+            ordersList.innerHTML = '';
+            const filteredOrders = allOrders.filter(order => order.status === activeStatusTab);
+            if (filteredOrders.length === 0) {
+                ordersList.innerHTML = `<p class="text-gray-500">Nenhum pedido com o status "${activeStatusTab}".</p>`;
+                return;
+            }
+            filteredOrders.forEach(order => {
+                const orderDate = order.timestamp.toDate();
+                const itemsHtml = order.itens.map(item => `<li>${item.quantidade}x ${item.nome}</li>`).join('');
+                let actionButton = '';
+                if(order.status === 'Recebido') actionButton = `<button data-id="${order.id}" data-new-status="Em Preparação" class="update-status-btn bg-blue-500 text-white px-3 py-1 rounded text-sm">Preparar</button>`;
+                else if (order.status === 'Em Preparação') actionButton = `<button data-id="${order.id}" data-new-status="Pronto" class="update-status-btn bg-yellow-500 text-white px-3 py-1 rounded text-sm">Pronto</button>`;
+                else if (order.status === 'Pronto') actionButton = `<button data-id="${order.id}" data-new-status="Finalizado" class="update-status-btn bg-green-500 text-white px-3 py-1 rounded text-sm">Finalizar</button>`;
+
+                let agendamentoHtml = '';
+                if (order.agendamento) {
+                    agendamentoHtml = `<div class="mt-2 text-sm bg-yellow-100 border border-yellow-300 text-yellow-800 p-2 rounded-md"><i class="fas fa-clock mr-2"></i><strong>Agendado para:</strong> ${order.agendamento.data} às ${order.agendamento.hora}</div>`;
+                }
+
+                ordersList.innerHTML += `<div class="bg-white p-4 rounded-lg shadow-sm border">
+                        <div class="flex justify-between items-start">
+                             <div><p class="font-bold text-lg">Pedido #${order.numeroPedido}</p><p class="text-sm text-gray-500">${orderDate.toLocaleString('pt-BR')}</p></div>
+                             ${actionButton}
+                        </div>
+                        ${agendamentoHtml}
+                        <div class="mt-4 border-t pt-4">
+                            <p><strong>Cliente:</strong> ${order.cliente.nome}</p><p><strong>Telefone:</strong> ${order.cliente.telefone}</p>
+                            <ul class="list-disc list-inside text-sm mt-2"><strong>Itens:</strong>${itemsHtml}</ul>
+                            ${order.observacoes ? `<p class="mt-2 text-sm"><strong>Obs:</strong> ${order.observacoes}</p>` : ''}
+                        </div>
+                        <div class="mt-4 border-t pt-2 flex justify-between items-center">
+                           <p class="font-bold text-lg">Total: R$ ${order.total.toFixed(2).replace('.', ',')}</p>
+                           <div class="flex items-center space-x-2">
+                               <button data-id="${order.id}" class="print-order-btn bg-gray-500 text-white px-3 py-1 rounded text-sm"><i class="fas fa-print mr-1"></i>Imprimir</button>
+                               <a href="https://wa.me/55${order.cliente.telefone.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded text-sm">WhatsApp</a>
+                               <button data-id="${order.id}" data-numero="${order.numeroPedido}" class="delete-order-btn bg-red-500 text-white px-2 py-1 rounded text-sm"><i class="fas fa-trash"></i></button>
+                           </div>
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        ordersList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+            const orderId = button.dataset.id;
+            if (button.classList.contains('update-status-btn')) {
+                await updateDoc(doc(db, 'pedidos', orderId), { status: button.dataset.newStatus });
+                showToast('Status do pedido atualizado!');
+            }
+            if (button.classList.contains('delete-order-btn')) {
+                const numeroPedido = button.dataset.numero;
+                showConfirm(`Tem a certeza que quer excluir o pedido #${numeroPedido}?`, async () => {
+                    await deleteDoc(doc(db, 'pedidos', orderId));
+                    showToast('Pedido excluído.');
+                });
+            }
+            if (button.classList.contains('print-order-btn')) {
+                printOrder(orderId);
+            }
+        });
+
+        function printOrder(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) return;
+            const orderDate = order.timestamp.toDate();
+            const itemsHtml = order.itens.map(item => `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;">${item.quantidade}x</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${item.nome}</td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">R$ ${(item.preco * item.quantidade).toFixed(2).replace('.', ',')}</td></tr>`).join('');
+            let agendamentoHtml = order.agendamento ? `<div style="background-color: #fffbe6; border: 1px solid #fde68a; padding: 10px; margin-bottom: 15px; border-radius: 5px;"><strong>AGENDADO PARA:</strong> ${order.agendamento.data} às ${order.agendamento.hora}</div>` : '';
+
+            const printContent = `<html><head><title>Pedido #${order.numeroPedido}</title><style>body{font-family:sans-serif;margin:20px;color:#333}.header{text-align:center;margin-bottom:20px}.header img{max-width:100px;margin-bottom:10px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px}th{border-bottom:2px solid #333}</style></head><body>
+                <div class="header"><img src="https://i.imgur.com/NG0KmeZ.jpeg" alt="Logo"><h2>Drei Herzen - Pedido #${order.numeroPedido}</h2></div>
+                ${agendamentoHtml}
+                <div><p><strong>Data do Pedido:</strong> ${orderDate.toLocaleString('pt-BR')}</p><p><strong>Cliente:</strong> ${order.cliente.nome}</p><p><strong>Telefone:</strong> ${order.cliente.telefone}</p></div>
+                <div style="margin-top:20px;"><h3>Itens do Pedido</h3><table><thead><tr><th>Qtd.</th><th>Produto</th><th style="text-align: right;">Subtotal</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>
+                ${order.observacoes ? `<div style="margin-top:15px;"><p><strong>Observações:</strong> ${order.observacoes}</p></div>` : ''}
+                <div style="text-align: right; margin-top: 20px; border-top: 2px solid #333; padding-top: 10px;"><p style="font-size: 1.5em; font-weight: bold;">Total: R$ ${order.total.toFixed(2).replace('.', ',')}</p></div>
+            </body></html>`;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+        
         function loadOrdersAndFinances() {
             const q = query(collection(db, 'pedidos'), orderBy('timestamp', 'desc'));
             onSnapshot(q, snapshot => {
@@ -257,57 +337,6 @@
             });
         });
         
-        function renderOrders() {
-            ordersList.innerHTML = '';
-            const filteredOrders = allOrders.filter(order => order.status === activeStatusTab);
-            if (filteredOrders.length === 0) {
-                ordersList.innerHTML = `<p class="text-gray-500">Nenhum pedido com o status "${activeStatusTab}".</p>`;
-                return;
-            }
-            filteredOrders.forEach(order => {
-                // ... (código de renderização do pedido)
-                const orderDate = order.timestamp.toDate();
-                const itemsHtml = order.itens.map(item => `<li>${item.quantidade}x ${item.nome}</li>`).join('');
-                let actionButton = '';
-
-                if(order.status === 'Recebido') actionButton = `<button data-id="${order.id}" data-new-status="Em Preparação" class="update-status-btn bg-blue-500 text-white px-3 py-1 rounded text-sm">Preparar</button>`;
-                else if (order.status === 'Em Preparação') actionButton = `<button data-id="${order.id}" data-new-status="Pronto" class="update-status-btn bg-yellow-500 text-white px-3 py-1 rounded text-sm">Pronto</button>`;
-                else if (order.status === 'Pronto') actionButton = `<button data-id="${order.id}" data-new-status="Finalizado" class="update-status-btn bg-green-500 text-white px-3 py-1 rounded text-sm">Finalizar</button>`;
-
-                ordersList.innerHTML += `<div class="bg-white p-4 rounded-lg shadow-sm border">
-                        <div class="flex justify-between items-start">
-                             <div><p class="font-bold text-lg">Pedido #${order.id.substring(0, 5)}</p><p class="text-sm text-gray-500">${orderDate.toLocaleString('pt-BR')}</p></div>
-                             ${actionButton}
-                        </div>
-                        <div class="mt-4 border-t pt-4"><p><strong>Cliente:</strong> ${order.cliente.nome}</p><p><strong>Telefone:</strong> ${order.cliente.telefone}</p><ul class="list-disc list-inside text-sm mt-2"><strong>Itens:</strong>${itemsHtml}</ul>${order.observacoes ? `<p class="mt-2 text-sm"><strong>Obs:</strong> ${order.observacoes}</p>` : ''}</div>
-                        <div class="mt-4 border-t pt-2 flex justify-between items-center">
-                           <p class="font-bold text-lg">Total: R$ ${order.total.toFixed(2).replace('.', ',')}</p>
-                           <div class="flex items-center space-x-2">
-                               <a href="https://wa.me/55${order.cliente.telefone.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded text-sm">WhatsApp</a>
-                               <button data-id="${order.id}" class="delete-order-btn bg-red-500 text-white px-2 py-1 rounded text-sm"><i class="fas fa-trash"></i></button>
-                           </div>
-                        </div>
-                    </div>`;
-            });
-        }
-        
-        ordersList.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-            const orderId = button.dataset.id;
-            if (button.classList.contains('update-status-btn')) {
-                await updateDoc(doc(db, 'pedidos', orderId), { status: button.dataset.newStatus });
-                showToast('Status do pedido atualizado!');
-            }
-            if (button.classList.contains('delete-order-btn')) {
-                showConfirm(`Tem a certeza que quer excluir o pedido #${orderId.substring(0, 5)}?`, async () => {
-                    await deleteDoc(doc(db, 'pedidos', orderId));
-                    showToast('Pedido excluído.');
-                });
-            }
-        });
-        
-        // --- LÓGICA FINANCEIRA ---
         financePeriodBtns.forEach(btn => {
             btn.addEventListener('click', e => {
                 financePeriodBtns.forEach(b => b.classList.remove('sub-tab-active'));
@@ -316,8 +345,9 @@
                 calculateFinances();
             })
         });
+        
         function calculateFinances() {
-             const now = new Date();
+            const now = new Date();
             const finalizedOrders = allOrders.filter(o => o.status === 'Finalizado');
             let filteredByPeriod = [];
 
@@ -334,14 +364,13 @@
             if (filteredByPeriod.length > 0) {
                 filteredByPeriod.forEach(order => {
                     financeOrdersList.innerHTML += `<div class="bg-white p-2 rounded text-sm flex justify-between">
-                        <span>#${order.id.substring(0,5)} - ${order.timestamp.toDate().toLocaleDateString()}</span>
+                        <span>#${order.numeroPedido} - ${order.timestamp.toDate().toLocaleDateString()}</span>
                         <strong>R$ ${order.total.toFixed(2).replace('.',',')}</strong>
                     </div>`;
                 });
             } else financeOrdersList.innerHTML = '<p class="text-gray-500 text-sm">Nenhum pedido finalizado neste período.</p>';
         }
 
-        // --- LÓGICA DE GESTÃO DO CARDÁPIO ---
         function loadCategories() {
             onSnapshot(query(collection(db, 'categorias'), orderBy('ordem')), snapshot => {
                 categoryList.innerHTML = '';
