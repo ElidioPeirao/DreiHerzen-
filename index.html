@@ -24,9 +24,8 @@
     </style>
 </head>
 <body>
-    <header class="text-center py-10 border-b-2 border-stone-200">
-        <h1 class="font-serif text-5xl text-stone-800 tracking-tight">Drei Herzen</h1>
-        <p class="mt-2 text-stone-500">Confeitaria & Sabores</p>
+    <header class="text-center pt-8 pb-4 border-b-2 border-stone-200">
+        <img src="https://imgur.com/Ykw6F4s.jpeg" alt="Logotipo da Drei Herzen" class="w-60 h-40 mx-auto">
     </header>
 
     <div id="info-loja" class="py-2 text-center text-sm font-semibold border-b border-stone-200"></div>
@@ -351,8 +350,6 @@
                 window.carrinho.forEach(item => { msg += `- ${item.quantidade}x ${item.nome}\n`; });
                 msg += `\n*TOTAL: R$ ${calcularTotal().toFixed(2).replace('.', ',')}*`;
                 
-                // --- ALTERAÇÃO PRINCIPAL AQUI ---
-                // Usar o link direto para a aplicação, ideal para telemóveis
                 window.location.href = `whatsapp://send?phone=${window.numeroRestaurante}&text=${encodeURIComponent(msg)}`;
                 
                 setTimeout(() => {
@@ -442,4 +439,5 @@
     </script>
 </body>
 </html>
+
 
