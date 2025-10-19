@@ -351,7 +351,9 @@
                 window.carrinho.forEach(item => { msg += `- ${item.quantidade}x ${item.nome}\n`; });
                 msg += `\n*TOTAL: R$ ${calcularTotal().toFixed(2).replace('.', ',')}*`;
                 
-                window.location.href = `https://wa.me/${window.numeroRestaurante}?text=${encodeURIComponent(msg)}`;
+                // --- ALTERAÇÃO PRINCIPAL AQUI ---
+                // Usar o link direto para a aplicação, ideal para telemóveis
+                window.location.href = `whatsapp://send?phone=${window.numeroRestaurante}&text=${encodeURIComponent(msg)}`;
                 
                 setTimeout(() => {
                     modalCliente.classList.add('hidden');
