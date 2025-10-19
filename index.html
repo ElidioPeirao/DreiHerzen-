@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drei Herzen - Confeitaria & Sabores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Lato', sans-serif; background-color: #FDFBF5; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .tab-active { border-bottom-color: #4A5C5A; color: #4A5C5A; font-weight: 700; }
+        .card-product { border: 1px solid #EAE3D8; transition: box-shadow 0.3s ease-in-out; }
+        .btn-primary { background-color: #728A87; color: white; }
+        .quantity-control button { width: 32px; height: 32px; border: 1px solid #ddd; border-radius: 50%; background-color: white; }
+        .quantity-control span { min-width: 40px; font-size: 1.1rem; }
+        .image-overlay-container { position: relative; cursor: pointer; }
+        .image-overlay { position: absolute; inset: 0; background-color: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; }
+        .image-overlay-container:hover .image-overlay { opacity: 1; }
+        .toast { opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; visibility: hidden; }
+        .toast-visible { opacity: 1; transform: translateY(0); visibility: visible; }
+        .btn-whatsapp { background-color: #25D366; }
+    </style>
+</head>
+<body>
+    <header class="text-center py-10 border-b-2 border-stone-200">
+        <h1 class="font-serif text-5xl text-stone-800 tracking-tight">Drei Herzen</h1>
+        <p class="mt-2 text-stone-500">Confeitaria & Sabores</p>
+    </header>
+
+    <div id="info-loja" class="py-2 text-center text-sm font-semibold border-b border-stone-200"></div>
+
+    <nav class="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
+        <div id="nav-tabs" class="container mx-auto max-w-3xl flex justify-around">
+            <p class="py-4 text-stone-500">A carregar cardápio...</p>
+        </div>
+        <div class="container mx-auto max-w-3xl p-4 border-t border-stone-200">
+             <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fas fa-search text-stone-400"></i></span>
+                <input type="text" id="search-bar" placeholder="Pesquisar em todo o cardápio..." class="w-full pl-10 pr-4 py-2 border rounded-full">
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 max-w-3xl pb-32">
+        <main id="menu">
+             <div id="no-results" class="text-center py-10 text-stone-500 hidden">
+                <i class="fas fa-search fa-2x mb-4"></i><p class="font-semibold">Nenhum produto encontrado</p>
+            </div>
+        </main>
+    </div>
+    
+    <footer id="carrinho" class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-lg p-4 border-t z-10">
+        <div class="container mx-auto max-w-3xl flex justify-between items-center">
+            <div>
+                <h2 class="font-bold text-lg flex items-center text-stone-700"><i class="fas fa-shopping-bag text-green-800/80 mr-2"></i>Seu Pedido</h2>
+                <h3 id="total" class="font-serif text-xl font-bold text-green-800">R$ 0,00</h3>
+            </div>
+            <button id="finalizar-pedido" class="bg-green-800/90 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-green-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                Finalizar Pedido
+            </button>
+        </div>
+    </footer>
+    
+    <div id="toast" class="fixed bottom-24 right-4 bg-stone-800 text-white py-2 px-5 rounded-lg shadow-xl z-50 toast">Item adicionado!</div>
+    
+    <div id="modal-detalhes" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50" onclick="fecharDetalhes()">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg relative" onclick="event.stopPropagation()">
+            <button id="fechar-detalhes-btn" class="absolute -top-3 -right-3 bg-white rounded-full h-8 w-8 text-xl flex items-center justify-center shadow-lg">&times;</button>
+            <img id="detalhes-img" src="" alt="Detalhe do produto" class="w-full h-64 object-cover rounded-t-lg">
+            <div class="p-6">
+                <h2 id="detalhes-titulo" class="font-serif text-3xl text-stone-800"></h2>
+                <p id="detalhes-descricao" class="text-stone-600 mt-4"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-confirmacao" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-40">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm text-center">
+            <h2 class="font-serif text-xl font-bold mb-4 text-stone-800">Item já adicionado</h2>
+            <p class="text-stone-600 mb-6">Você já tem <strong id="confirm-item-name" class="text-stone-800"></strong> no carrinho. Deseja adicionar mais?</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancelar-adicao-btn" class="bg-stone-200 text-stone-800 font-bold py-2 px-6 rounded-lg hover:bg-stone-300 transition">Cancelar</button>
+                <button id="confirmar-adicao-btn" class="btn-primary font-bold py-2 px-6 rounded-lg transition">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-revisao" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-20">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center border-b border-stone-200 pb-3 mb-4">
+                <h2 class="font-serif text-2xl font-bold text-stone-800">Revise seu Pedido</h2>
+                <button id="fechar-revisao" class="text-stone-500 hover:text-stone-800 text-2xl">&times;</button>
+            </div>
+            <div id="lista-revisao" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
+            <div class="border-t border-stone-200 pt-3 mt-4">
+                <div class="text-sm text-stone-600 p-3 bg-stone-50 rounded-md mb-4 border border-stone-200">
+                    <p class="font-semibold text-stone-700"><i class="fas fa-info-circle mr-1 text-green-800/80"></i> Informações</p>
+                    <p class="mt-1">A taxa de entrega será informada via WhatsApp. Pode também retirar no local.</p>
+                </div>
+                <div class="flex justify-between font-bold text-xl">
+                    <span class="text-stone-800">Total:</span>
+                    <span id="total-revisao" class="text-green-800 font-serif">R$ 0,00</span>
+                </div>
+            </div>
+            <div class="mt-8">
+                <button id="ir-para-dados" class="w-full bg-green-800/90 text-white font-bold py-3 px-4 rounded-lg text-lg hover:bg-green-800 transition">
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-cliente" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-30">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <h2 class="font-serif text-2xl font-bold mb-4 text-stone-800">Seus Dados</h2>
+            <form id="form-cliente"></form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
+            authDomain: "dreiherzen-c7640.firebaseapp.com",
+            projectId: "dreiherzen-c7640",
+            storageBucket: "dreiherzen-c7640.firebasestorage.app",
+            messagingSenderId: "324520974615",
+            appId: "1:324520974615:web:51e4abd4d45add5d9eff52",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const navTabs = document.getElementById('nav-tabs');
+        const menuContainer = document.getElementById('menu');
+        window.carrinho = [];
+        window.itemParaConfirmar = null;
+        window.numeroRestaurante = '5547988341912';
+
+        async function loadMenu() {
+            const categoriesQuery = query(collection(db, 'categorias'), orderBy('ordem'));
+            const categoriesSnapshot = await getDocs(categoriesQuery);
+            navTabs.innerHTML = '';
+            menuContainer.insertBefore(document.getElementById('no-results'), menuContainer.firstChild);
+
+            const productsSnapshot = await getDocs(collection(db, 'produtos'));
+            const products = [];
+            productsSnapshot.forEach(doc => products.push({ id: doc.id, ...doc.data() }));
+
+            let isFirstTab = true;
+            categoriesSnapshot.forEach(doc => {
+                const category = { id: doc.id, ...doc.data() };
+                
+                const tabButton = document.createElement('button');
+                tabButton.id = `tab-${category.id}`;
+                tabButton.className = `tab-button w-full py-4 text-center border-b-2 transition ${isFirstTab ? 'tab-active' : 'border-transparent'}`;
+                tabButton.textContent = category.nome;
+                navTabs.appendChild(tabButton);
+
+                const section = document.createElement('section');
+                section.id = `content-${category.id}`;
+                section.className = `tab-content ${isFirstTab ? '' : 'hidden'}`;
+                section.innerHTML = `<h2 class="font-serif text-2xl text-stone-700 mb-4 section-title">${category.nome}</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>`;
+                menuContainer.appendChild(section);
+                
+                const productGrid = section.querySelector('.grid');
+                products.filter(p => p.categoriaId === category.id).forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'card-product rounded-lg bg-white overflow-hidden';
+                    productCard.dataset.name = product.nome.toLowerCase();
+                    
+                    let imagemHtml = '';
+                    if (product.imagemUrl) {
+                        const escapedDescricao = product.descricao.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const escapedNome = product.nome.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        imagemHtml = `<div class="image-overlay-container" onclick="mostrarDetalhes({img: '${product.imagemUrl}', titulo: '${escapedNome}', descricao: '${escapedDescricao}'})">
+                            <img src="${product.imagemUrl}" alt="${product.nome}" class="w-full h-48 object-cover"><div class="image-overlay"><i class="fas fa-search-plus fa-2x"></i></div></div>`;
+                    }
+
+                    const escapedNomeAdicionar = product.nome.replace(/'/g, "\\'");
+                    productCard.innerHTML = `
+                        ${imagemHtml}
+                        <div class="p-4">
+                            <h3 class="font-serif text-xl">${product.nome}</h3>
+                            <p class="text-lg font-bold mt-2">R$ ${Number(product.preco).toFixed(2).replace('.', ',')}</p>
+                            <div class="mt-4 flex items-center justify-between bg-stone-50 p-2 rounded-lg border">
+                                <div class="quantity-control flex items-center gap-3">
+                                    <button onclick="ajustarQuantidade('${product.idUnico}', -1)">-</button>
+                                    <span id="qtd-display-${product.idUnico}" class="text-center">1</span>
+                                    <button onclick="ajustarQuantidade('${product.idUnico}', 1)">+</button>
+                                </div>
+                                <button onclick="adicionarItem('${product.idUnico}', '${escapedNomeAdicionar}', ${product.preco})" class="btn-primary font-bold py-2 px-4 rounded-full">Adicionar</button>
+                            </div>
+                        </div>`;
+                    productGrid.appendChild(productCard);
+                });
+
+                isFirstTab = false;
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(button => {
+                 button.addEventListener('click', window.handleTabClick);
+            });
+        }
+        
+        // --- FUNÇÕES GLOBAIS ---
+        
+        // Restante do JS (lógica de guias, pesquisa, carrinho, modais, etc.)
+        const totalFooter = document.getElementById('total');
+        const finalizarPedidoBtn = document.getElementById('finalizar-pedido');
+        const toastNotification = document.getElementById('toast');
+        const searchBar = document.getElementById('search-bar');
+        const noResultsMsg = document.getElementById('no-results');
+        
+        const modalDetalhes = document.getElementById('modal-detalhes');
+        const fecharDetalhesBtn = document.getElementById('fechar-detalhes-btn');
+
+        window.mostrarDetalhes = function(produto) {
+            document.getElementById('detalhes-img').src = produto.img;
+            document.getElementById('detalhes-titulo').textContent = produto.titulo;
+            document.getElementById('detalhes-descricao').textContent = produto.descricao;
+            modalDetalhes.classList.remove('hidden');
+        }
+        window.fecharDetalhes = function() { modalDetalhes.classList.add('hidden'); }
+        fecharDetalhesBtn.addEventListener('click', window.fecharDetalhes);
+
+        window.handleTabClick = function(event) {
+            const clickedButton = event.currentTarget;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('tab-active'));
+            clickedButton.classList.add('tab-active');
+            const targetContentId = `content-${clickedButton.id.split('-')[1]}`;
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('hidden', content.id !== targetContentId);
+            });
+            searchBar.value = '';
+            restaurarVisualizacaoPadrao();
+        }
+
+        function filtrarProdutosGlobalmente() {
+            const termo = searchBar.value.toLowerCase().trim();
+            if (termo === "") {
+                restaurarVisualizacaoPadrao();
+                return;
+            }
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('tab-active'));
+            let totalResultados = 0;
+            document.querySelectorAll('.tab-content').forEach(secao => {
+                let resultadosNaSecao = 0;
+                secao.querySelectorAll('.card-product').forEach(produto => {
+                    const nomeProduto = produto.dataset.name.toLowerCase();
+                    const corresponde = nomeProduto.includes(termo);
+                    produto.style.display = corresponde ? 'block' : 'none';
+                    if (corresponde) {
+                        resultadosNaSecao++;
+                        totalResultados++;
+                    }
+                });
+                secao.classList.toggle('hidden', resultadosNaSecao === 0);
+            });
+            noResultsMsg.classList.toggle('hidden', totalResultados > 0);
+        }
+
+        function restaurarVisualizacaoPadrao() {
+            const guiaAtivaBtn = document.querySelector('.tab-button.tab-active') || document.querySelector('.tab-button');
+            if (guiaAtivaBtn) {
+                guiaAtivaBtn.classList.add('tab-active');
+                const targetContentId = `content-${guiaAtivaBtn.id.split('-')[1]}`;
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('hidden', content.id !== targetContentId);
+                });
+            }
+            document.querySelectorAll('.card-product').forEach(p => p.style.display = 'block');
+            noResultsMsg.classList.add('hidden');
+        }
+        searchBar.addEventListener('input', filtrarProdutosGlobalmente);
+        
+        window.ajustarQuantidade = function(id, delta) {
+            const display = document.getElementById(`qtd-display-${id}`);
+            let quantidadeAtual = parseInt(display.textContent);
+            quantidadeAtual += delta;
+            if (quantidadeAtual < 1) quantidadeAtual = 1;
+            display.textContent = quantidadeAtual;
+        }
+
+        window.adicionarItem = function(idUnico, nome, preco) {
+            const display = document.getElementById(`qtd-display-${idUnico}`);
+            const quantidade = parseInt(display.textContent);
+            if (window.carrinho.find(item => item.idUnico === idUnico)) {
+                window.itemParaConfirmar = { idUnico, nome, preco, quantidade };
+                document.getElementById('confirm-item-name').textContent = nome;
+                document.getElementById('modal-confirmacao').classList.remove('hidden');
+            } else {
+                adicionarItemDeFato({ idUnico, nome, preco, quantidade });
+            }
+        }
+
+        function adicionarItemDeFato(item) {
+            const itemExistente = window.carrinho.find(i => i.idUnico === item.idUnico);
+            if (itemExistente) {
+                itemExistente.quantidade += item.quantidade;
+            } else {
+                window.carrinho.push(item);
+            }
+            document.getElementById(`qtd-display-${item.idUnico}`).textContent = 1;
+            atualizarCarrinho();
+            mostrarToast();
+        }
+        
+        document.getElementById('confirmar-adicao-btn').addEventListener('click', () => {
+            if (window.itemParaConfirmar) {
+                adicionarItemDeFato(window.itemParaConfirmar);
+                window.itemParaConfirmar = null;
+                document.getElementById('modal-confirmacao').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('cancelar-adicao-btn').addEventListener('click', () => {
+            window.itemParaConfirmar = null;
+            document.getElementById('modal-confirmacao').classList.add('hidden');
+        });
+
+        window.removerItem = function(idParaRemover) {
+            window.carrinho = window.carrinho.filter(item => item.idUnico !== idParaRemover);
+            atualizarCarrinho();
+            if (!document.getElementById('modal-revisao').classList.contains('hidden')) {
+                mostrarRevisao();
+            }
+        }
+
+        function calcularTotal() {
+            return window.carrinho.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+        }
+
+        function atualizarCarrinho() {
+            const total = calcularTotal();
+            totalFooter.textContent = total === 0 ? 'R$ 0,00' : `R$ ${total.toFixed(2).replace('.', ',')}`;
+            finalizarPedidoBtn.disabled = total === 0;
+        }
+        
+        function mostrarToast() {
+            toastNotification.classList.add('toast-visible');
+            setTimeout(() => {
+                toastNotification.classList.remove('toast-visible');
+            }, 2000);
+        }
+        
+        function verificarStatusLoja() {
+            const infoLoja = document.getElementById('info-loja');
+            const horarios = { 0: { abre: 18, fecha: 22 }, 1: null, 2: { abre: 18, fecha: 22 }, 3: { abre: 18, fecha: 22 }, 4: { abre: 18, fecha: 22 }, 5: { abre: 18, fecha: 22 }, 6: { abre: 18, fecha: 22 } };
+            const agora = new Date();
+            const diaSemana = agora.getDay();
+            const horaAtual = agora.getHours();
+            const horarioHoje = horarios[diaSemana];
+            let status = (horarioHoje && horaAtual >= horarioHoje.abre && horaAtual < horarioHoje.fecha) 
+                ? `<span class="bg-green-100 text-green-800 py-1 px-3 rounded-full">Aberto agora</span>`
+                : `<span class="bg-red-100 text-red-800 py-1 px-3 rounded-full">Fechado</span>`;
+            infoLoja.innerHTML = `${status} <span class="text-stone-600 ml-2 hidden sm:inline">Horário: Terça a Domingo, das 18h às 22h</span>`;
+        }
+        
+        const modalRevisao = document.getElementById('modal-revisao');
+        function mostrarRevisao() {
+            if (window.carrinho.length === 0) {
+                modalRevisao.classList.add('hidden');
+                return;
+            };
+            const listaRevisao = document.getElementById('lista-revisao');
+            listaRevisao.innerHTML = '';
+            window.carrinho.forEach(item => {
+                listaRevisao.innerHTML += `
+                    <div class="flex justify-between items-center text-stone-700">
+                        <div><span>${item.quantidade}x </span><span class="font-semibold">${item.nome}</span></div>
+                        <div class="flex items-center"><span class="font-medium mr-4">R$ ${(item.preco * item.quantidade).toFixed(2).replace('.', ',')}</span>
+                        <button onclick="removerItem('${item.idUnico}')" class="text-red-500/70 hover:text-red-600 transition"><i class="fas fa-trash-alt"></i></button></div>
+                    </div>`;
+            });
+            document.getElementById('total-revisao').textContent = `R$ ${calcularTotal().toFixed(2).replace('.', ',')}`;
+            modalRevisao.classList.remove('hidden');
+        }
+        finalizarPedidoBtn.addEventListener('click', mostrarRevisao);
+        document.getElementById('fechar-revisao').addEventListener('click', () => modalRevisao.classList.add('hidden'));
+        
+        const modalCliente = document.getElementById('modal-cliente');
+        document.getElementById('ir-para-dados').addEventListener('click', () => {
+            modalRevisao.classList.add('hidden');
+            const formCliente = document.getElementById('form-cliente');
+            if (!document.getElementById('nome')) {
+                formCliente.innerHTML = `
+                    <div class="space-y-4">
+                        <div><label for="nome" class="block text-sm font-medium text-stone-700">Nome Completo</label><input type="text" id="nome" required class="mt-1 block w-full border border-stone-300 rounded-md shadow-sm p-2 focus:ring-green-800/50 focus:border-green-800/50"></div>
+                        <div><label for="telefone" class="block text-sm font-medium text-stone-700">Telefone (WhatsApp)</label><input type="tel" id="telefone" required class="mt-1 block w-full border border-stone-300 rounded-md shadow-sm p-2 focus:ring-green-800/50 focus:border-green-800/50"></div>
+                        <div><label for="cpf" class="block text-sm font-medium text-stone-700">CPF na nota? (Opcional)</label><input type="text" id="cpf" class="mt-1 block w-full border border-stone-300 rounded-md shadow-sm p-2 focus:ring-green-800/50 focus:border-green-800/50"></div>
+                        <div><label for="observacoes" class="block text-sm font-medium text-stone-700">Observações</label><textarea id="observacoes" rows="3" class="mt-1 block w-full border border-stone-300 rounded-md shadow-sm p-2" placeholder="Ex: sem cebola..."></textarea></div>
+                    </div>
+                    <div class="mt-8"><button type="submit" class="btn-whatsapp w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center text-lg transition"><i class="fab fa-whatsapp mr-3"></i>Enviar Pedido</button></div>`;
+            }
+            modalCliente.classList.remove('hidden');
+        });
+        modalCliente.addEventListener('click', e => { if (e.target === modalCliente) modalCliente.classList.add('hidden'); });
+        
+        document.getElementById('form-cliente').addEventListener('submit', async e => {
+            e.preventDefault();
+            const nome = document.getElementById('nome').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+            if(!nome || !telefone) return;
+            const cpf = document.getElementById('cpf').value.trim();
+            const observacoes = document.getElementById('observacoes').value.trim();
+            
+            try {
+                const docRef = await addDoc(collection(db, "pedidos"), {
+                    cliente: { nome, telefone, cpf },
+                    itens: window.carrinho,
+                    total: calcularTotal(),
+                    status: 'Recebido',
+                    observacoes: observacoes,
+                    timestamp: serverTimestamp()
+                });
+                
+                let msg = `Olá! 👋 Novo Pedido (#${docRef.id.substring(0, 5)}) de *Drei Herzen*:\n\n*CLIENTE:*\n- Nome: ${nome}\n- Telefone: ${telefone}\n`;
+                if (cpf) msg += `- CPF: ${cpf}\n`;
+                if (observacoes) msg += `- Obs: ${observacoes}\n`;
+                msg += `\n*PEDIDO:*\n`;
+                window.carrinho.forEach(item => { msg += `- ${item.quantidade}x ${item.nome}\n`; });
+                msg += `\n*TOTAL: R$ ${calcularTotal().toFixed(2).replace('.', ',')}*`;
+                
+                window.open(`https://wa.me/${window.numeroRestaurante}?text=${encodeURIComponent(msg)}`, '_blank');
+                
+                modalCliente.classList.add('hidden');
+                document.getElementById('form-cliente').reset();
+                window.carrinho = [];
+                atualizarCarrinho();
+
+            } catch (error) {
+                console.error("Erro ao salvar pedido: ", error);
+                alert("Não foi possível registar o seu pedido. Tente novamente.");
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            verificarStatusLoja();
+            loadMenu();
+            atualizarCarrinho();
+        });
+    </script>
+</body>
+</html>
