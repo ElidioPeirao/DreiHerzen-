@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Drei Herzen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Lato', sans-serif; background-color: #FDFBF5; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .main-tab-active { border-color: #728A87; background-color: #F0F0F0; color: #4A5C5A; }
+        .sub-tab-active { background-color: #728A87; color: white; }
+        .toast { transition: opacity 0.3s ease, transform 0.3s ease; }
+    </style>
+</head>
+<body>
+    <!-- Ecrã de Login -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-stone-100">
+        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
+            <h1 class="font-serif text-3xl text-stone-800 text-center">Drei Herzen</h1>
+            <h2 class="text-stone-500 text-center mb-6">Painel de Administrador</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-stone-700">E-mail</label>
+                    <input type="email" id="email" required class="mt-1 block w-full border border-stone-300 rounded-md p-2">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-stone-700">Senha</label>
+                    <input type="password" id="password" required class="mt-1 block w-full border border-stone-300 rounded-md p-2">
+                </div>
+                <button type="submit" class="w-full bg-amber-800 text-white font-bold py-2 rounded-lg">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Painel de Gestão -->
+    <div id="admin-panel" class="hidden">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center">
+            <h1 class="font-serif text-2xl text-stone-800">Painel de Gestão</h1>
+            <button id="logout-btn" class="text-sm text-stone-600 hover:text-amber-800">Sair <i class="fas fa-sign-out-alt ml-1"></i></button>
+        </header>
+
+        <div class="border-b border-gray-200 bg-stone-50">
+            <nav id="admin-tabs" class="-mb-px flex justify-center" aria-label="Tabs">
+                <button data-tab="pedidos" class="admin-tab main-tab-active w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm">Gestão de Pedidos</button>
+                <button data-tab="cardapio" class="admin-tab w-1/3 py-4 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">Gestão do Cardápio</button>
+                <button data-tab="financeiro" class="admin-tab w-1/3 py-4 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">Financeiro</button>
+            </nav>
+        </div>
+
+        <div class="container mx-auto p-4">
+            <div id="pedidos-content" class="tab-content">
+                <div class="mb-4 border-b border-gray-200">
+                    <nav id="orders-sub-tabs" class="flex space-x-4" aria-label="Sub-tabs">
+                        <button data-status="Recebido" class="order-status-tab sub-tab-active px-3 py-2 font-medium text-sm rounded-md">Recebidos</button>
+                        <button data-status="Em Preparação" class="order-status-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700">Em Preparação</button>
+                        <button data-status="Pronto" class="order-status-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700">Prontos</button>
+                        <button data-status="Finalizado" class="order-status-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700">Finalizados</button>
+                    </nav>
+                </div>
+                <div id="orders-list" class="space-y-4"></div>
+            </div>
+            <div id="cardapio-content" class="tab-content hidden">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-1">
+                        <h2 class="font-serif text-xl border-b pb-2 mb-4">Categorias</h2>
+                        <div id="category-list" class="space-y-2 mb-6"></div>
+                        <form id="category-form" class="bg-stone-50 p-4 rounded-lg border">
+                            <h3 class="font-semibold mb-2" id="category-form-title">Nova Categoria</h3>
+                            <input type="hidden" id="category-id">
+                            <input type="text" id="category-name" placeholder="Nome da categoria" required class="w-full border p-2 rounded-md mb-2">
+                            <input type="number" id="category-order" placeholder="Ordem (ex: 1)" required class="w-full border p-2 rounded-md mb-2">
+                            <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-md">Salvar Categoria</button>
+                            <button type="button" id="cancel-edit-cat" class="w-full bg-gray-400 text-white py-2 rounded-md mt-2 hidden">Cancelar Edição</button>
+                        </form>
+                    </div>
+                    <div class="md:col-span-2">
+                        <h2 class="font-serif text-xl border-b pb-2 mb-4">Produtos</h2>
+                        <div id="product-list" class="space-y-2 mb-6"></div>
+                        <form id="product-form" class="bg-stone-50 p-4 rounded-lg border">
+                            <h3 class="font-semibold mb-2" id="product-form-title">Novo Produto</h3>
+                            <input type="hidden" id="product-id"> <input type="hidden" id="current-image-url">
+                            <select id="product-category" required class="w-full border p-2 rounded-md mb-2"></select>
+                            <input type="text" id="product-name" placeholder="Nome do produto" required class="w-full border p-2 rounded-md mb-2">
+                            <input type="text" id="product-id-unico" placeholder="ID único (ex: 'biscoito-choc')" required class="w-full border p-2 rounded-md mb-2">
+                            <textarea id="product-description" placeholder="Descrição detalhada" required class="w-full border p-2 rounded-md mb-2"></textarea>
+                            <input type="number" id="product-price" placeholder="Preço (ex: 8.50)" step="0.01" required class="w-full border p-2 rounded-md mb-2">
+                            <label for="product-image-file" class="block text-sm font-medium text-stone-700">Imagem do Produto</label>
+                            <input type="file" id="product-image-file" accept="image/*" class="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-stone-200 file:text-stone-700 hover:file:bg-stone-300 mb-2">
+                            <div id="image-preview" class="text-xs text-stone-500 truncate"></div>
+                            <button type="submit" id="save-product-btn" class="w-full bg-green-700 text-white py-2 rounded-md mt-2">Salvar Produto</button>
+                             <button type="button" id="cancel-edit-prod" class="w-full bg-gray-400 text-white py-2 rounded-md mt-2 hidden">Cancelar Edição</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div id="financeiro-content" class="tab-content hidden">
+                <h2 class="font-serif text-2xl mb-4">Resumo Financeiro</h2>
+                <div class="mb-4 flex space-x-2">
+                    <button data-period="today" class="finance-period-btn sub-tab-active px-3 py-1 font-medium text-sm rounded-md">Hoje</button>
+                    <button data-period="month" class="finance-period-btn px-3 py-1 font-medium text-sm rounded-md text-gray-500">Este Mês</button>
+                    <button data-period="all" class="finance-period-btn px-3 py-1 font-medium text-sm rounded-md text-gray-500">Tudo</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-lg shadow"><p class="text-sm text-gray-500">Faturamento no Período</p><p id="period-revenue" class="text-2xl font-bold">R$ 0,00</p></div>
+                    <div class="bg-white p-4 rounded-lg shadow"><p class="text-sm text-gray-500">Pedidos no Período</p><p id="period-orders" class="text-2xl font-bold">0</p></div>
+                </div>
+                <h3 class="font-serif text-xl mb-2">Pedidos Finalizados no Período</h3>
+                <div id="finance-orders-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NOTIFICAÇÕES -->
+    <div id="admin-toast" class="toast fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl z-50 transform translate-y-20 opacity-0">
+        <span id="toast-message"></span>
+    </div>
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm text-center">
+            <h2 class="font-serif text-xl font-bold mb-4 text-stone-800">Confirmar Ação</h2>
+            <p id="confirm-message" class="text-stone-600 mb-6"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="bg-stone-200 text-stone-800 font-bold py-2 px-6 rounded-lg hover:bg-stone-300 transition">Cancelar</button>
+                <button id="confirm-ok-btn" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
+            authDomain: "dreiherzen-c7640.firebaseapp.com",
+            projectId: "dreiherzen-c7640",
+            storageBucket: "dreiherzen-c7640.firebasestorage.app",
+            messagingSenderId: "324520974615",
+            appId: "1:324520974615:web:51e4abd4d45add5d9eff52",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let allOrders = [], categories = [], products = [];
+        let activeStatusTab = 'Recebido';
+        let activeFinancePeriod = 'today';
+        let confirmCallback = null;
+
+        const loginScreen = document.getElementById('login-screen');
+        const adminPanel = document.getElementById('admin-panel');
+        const loginForm = document.getElementById('login-form');
+        const logoutBtn = document.getElementById('logout-btn');
+        const adminTabs = document.querySelectorAll('.admin-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const ordersList = document.getElementById('orders-list');
+        const ordersSubTabs = document.querySelectorAll('.order-status-tab');
+        const financePeriodBtns = document.querySelectorAll('.finance-period-btn');
+        const categoryList = document.getElementById('category-list');
+        const categoryForm = document.getElementById('category-form');
+        const productCategorySelect = document.getElementById('product-category');
+        const cancelEditCatBtn = document.getElementById('cancel-edit-cat');
+        const productList = document.getElementById('product-list');
+        const productForm = document.getElementById('product-form');
+        const cancelEditProdBtn = document.getElementById('cancel-edit-prod');
+        const imagePreview = document.getElementById('image-preview');
+        const saveProductBtn = document.getElementById('save-product-btn');
+        const adminToast = document.getElementById('admin-toast');
+        const toastMessage = document.getElementById('toast-message');
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmMessage = document.getElementById('confirm-message');
+        const confirmOkBtn = document.getElementById('confirm-ok-btn');
+        const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+        
+        // --- LÓGICA DE NOTIFICAÇÃO ---
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            adminToast.classList.toggle('bg-red-500', isError);
+            adminToast.classList.toggle('bg-stone-800', !isError);
+            adminToast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                adminToast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function showConfirm(message, onConfirm) {
+            confirmMessage.textContent = message;
+            confirmCallback = onConfirm;
+            confirmModal.classList.remove('hidden');
+        }
+
+        confirmOkBtn.addEventListener('click', () => {
+            if (confirmCallback) confirmCallback();
+            confirmModal.classList.add('hidden');
+        });
+        confirmCancelBtn.addEventListener('click', () => {
+            confirmCallback = null;
+            confirmModal.classList.add('hidden');
+        });
+
+        // --- LÓGICA GERAL ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                loginScreen.classList.add('hidden');
+                adminPanel.classList.remove('hidden');
+                loadAllData();
+            } else {
+                loginScreen.classList.remove('hidden');
+                adminPanel.classList.add('hidden');
+            }
+        });
+        loginForm.addEventListener('submit', e => { 
+            e.preventDefault(); 
+            signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value)
+            .catch(err => showToast("E-mail ou senha incorretos.", true));
+        });
+        logoutBtn.addEventListener('click', () => signOut(auth));
+        
+        adminTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                adminTabs.forEach(t => t.classList.remove('main-tab-active'));
+                e.currentTarget.classList.add('main-tab-active');
+                tabContents.forEach(c => c.classList.toggle('hidden', c.id !== `${e.currentTarget.dataset.tab}-content`));
+            });
+        });
+        
+        function loadAllData() {
+            loadOrdersAndFinances();
+            loadCategories();
+            loadProducts();
+        }
+
+        // --- LÓGICA DE GESTÃO DE PEDIDOS ---
+        function loadOrdersAndFinances() {
+            const q = query(collection(db, 'pedidos'), orderBy('timestamp', 'desc'));
+            onSnapshot(q, snapshot => {
+                allOrders = [];
+                snapshot.forEach(doc => allOrders.push({ id: doc.id, ...doc.data() }));
+                renderOrders();
+                calculateFinances();
+            });
+        }
+        
+        ordersSubTabs.forEach(tab => {
+            tab.addEventListener('click', e => {
+                ordersSubTabs.forEach(t => t.classList.remove('sub-tab-active'));
+                e.currentTarget.classList.add('sub-tab-active');
+                activeStatusTab = e.currentTarget.dataset.status;
+                renderOrders();
+            });
+        });
+        
+        function renderOrders() {
+            ordersList.innerHTML = '';
+            const filteredOrders = allOrders.filter(order => order.status === activeStatusTab);
+            if (filteredOrders.length === 0) {
+                ordersList.innerHTML = `<p class="text-gray-500">Nenhum pedido com o status "${activeStatusTab}".</p>`;
+                return;
+            }
+            filteredOrders.forEach(order => {
+                // ... (código de renderização do pedido)
+                const orderDate = order.timestamp.toDate();
+                const itemsHtml = order.itens.map(item => `<li>${item.quantidade}x ${item.nome}</li>`).join('');
+                let actionButton = '';
+
+                if(order.status === 'Recebido') actionButton = `<button data-id="${order.id}" data-new-status="Em Preparação" class="update-status-btn bg-blue-500 text-white px-3 py-1 rounded text-sm">Preparar</button>`;
+                else if (order.status === 'Em Preparação') actionButton = `<button data-id="${order.id}" data-new-status="Pronto" class="update-status-btn bg-yellow-500 text-white px-3 py-1 rounded text-sm">Pronto</button>`;
+                else if (order.status === 'Pronto') actionButton = `<button data-id="${order.id}" data-new-status="Finalizado" class="update-status-btn bg-green-500 text-white px-3 py-1 rounded text-sm">Finalizar</button>`;
+
+                ordersList.innerHTML += `<div class="bg-white p-4 rounded-lg shadow-sm border">
+                        <div class="flex justify-between items-start">
+                             <div><p class="font-bold text-lg">Pedido #${order.id.substring(0, 5)}</p><p class="text-sm text-gray-500">${orderDate.toLocaleString('pt-BR')}</p></div>
+                             ${actionButton}
+                        </div>
+                        <div class="mt-4 border-t pt-4"><p><strong>Cliente:</strong> ${order.cliente.nome}</p><p><strong>Telefone:</strong> ${order.cliente.telefone}</p><ul class="list-disc list-inside text-sm mt-2"><strong>Itens:</strong>${itemsHtml}</ul>${order.observacoes ? `<p class="mt-2 text-sm"><strong>Obs:</strong> ${order.observacoes}</p>` : ''}</div>
+                        <div class="mt-4 border-t pt-2 flex justify-between items-center">
+                           <p class="font-bold text-lg">Total: R$ ${order.total.toFixed(2).replace('.', ',')}</p>
+                           <div class="flex items-center space-x-2">
+                               <a href="https://wa.me/55${order.cliente.telefone.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded text-sm">WhatsApp</a>
+                               <button data-id="${order.id}" class="delete-order-btn bg-red-500 text-white px-2 py-1 rounded text-sm"><i class="fas fa-trash"></i></button>
+                           </div>
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        ordersList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+            const orderId = button.dataset.id;
+            if (button.classList.contains('update-status-btn')) {
+                await updateDoc(doc(db, 'pedidos', orderId), { status: button.dataset.newStatus });
+                showToast('Status do pedido atualizado!');
+            }
+            if (button.classList.contains('delete-order-btn')) {
+                showConfirm(`Tem a certeza que quer excluir o pedido #${orderId.substring(0, 5)}?`, async () => {
+                    await deleteDoc(doc(db, 'pedidos', orderId));
+                    showToast('Pedido excluído.');
+                });
+            }
+        });
+        
+        // --- LÓGICA FINANCEIRA ---
+        financePeriodBtns.forEach(btn => {
+            btn.addEventListener('click', e => {
+                financePeriodBtns.forEach(b => b.classList.remove('sub-tab-active'));
+                e.currentTarget.classList.add('sub-tab-active');
+                activeFinancePeriod = e.currentTarget.dataset.period;
+                calculateFinances();
+            })
+        });
+        function calculateFinances() {
+             const now = new Date();
+            const finalizedOrders = allOrders.filter(o => o.status === 'Finalizado');
+            let filteredByPeriod = [];
+
+            if (activeFinancePeriod === 'today') filteredByPeriod = finalizedOrders.filter(o => o.timestamp.toDate().toDateString() === now.toDateString());
+            else if (activeFinancePeriod === 'month') filteredByPeriod = finalizedOrders.filter(o => o.timestamp.toDate().getMonth() === now.getMonth() && o.timestamp.toDate().getFullYear() === now.getFullYear());
+            else filteredByPeriod = finalizedOrders;
+
+            const periodRevenue = filteredByPeriod.reduce((sum, order) => sum + order.total, 0);
+            document.getElementById('period-revenue').textContent = `R$ ${periodRevenue.toFixed(2).replace('.', ',')}`;
+            document.getElementById('period-orders').textContent = filteredByPeriod.length;
+
+            const financeOrdersList = document.getElementById('finance-orders-list');
+            financeOrdersList.innerHTML = '';
+            if (filteredByPeriod.length > 0) {
+                filteredByPeriod.forEach(order => {
+                    financeOrdersList.innerHTML += `<div class="bg-white p-2 rounded text-sm flex justify-between">
+                        <span>#${order.id.substring(0,5)} - ${order.timestamp.toDate().toLocaleDateString()}</span>
+                        <strong>R$ ${order.total.toFixed(2).replace('.',',')}</strong>
+                    </div>`;
+                });
+            } else financeOrdersList.innerHTML = '<p class="text-gray-500 text-sm">Nenhum pedido finalizado neste período.</p>';
+        }
+
+        // --- LÓGICA DE GESTÃO DO CARDÁPIO ---
+        function loadCategories() {
+            onSnapshot(query(collection(db, 'categorias'), orderBy('ordem')), snapshot => {
+                categoryList.innerHTML = '';
+                productCategorySelect.innerHTML = '<option value="">-- Selecione a Categoria --</option>';
+                categories = [];
+                snapshot.forEach(doc => {
+                    const category = { id: doc.id, ...doc.data() };
+                    categories.push(category);
+                    categoryList.innerHTML += `<div class="flex justify-between items-center bg-white p-2 rounded shadow-sm"><span>${category.ordem}. ${category.nome}</span><div>
+                        <button class="edit-cat-btn text-blue-500 mr-2" data-id="${category.id}">Editar</button>
+                        <button class="delete-cat-btn text-red-500" data-id="${category.id}">Excluir</button>
+                    </div></div>`;
+                    productCategorySelect.innerHTML += `<option value="${category.id}">${category.nome}</option>`;
+                });
+            });
+        }
+
+        function resetCategoryForm() {
+            categoryForm.reset();
+            categoryForm.querySelector('h3').textContent = "Nova Categoria";
+            categoryForm['category-id'].value = '';
+            cancelEditCatBtn.classList.add('hidden');
+        }
+
+        function loadProducts() {
+            onSnapshot(query(collection(db, 'produtos'), orderBy('nome')), snapshot => {
+                productList.innerHTML = '';
+                products = [];
+                snapshot.forEach(doc => {
+                    const product = { id: doc.id, ...doc.data() };
+                    products.push(product);
+                    productList.innerHTML += `<div class="flex justify-between items-center bg-white p-2 rounded shadow-sm"><span>${product.nome}</span><div>
+                        <button class="edit-prod-btn text-blue-500 mr-2" data-id="${doc.id}">Editar</button>
+                        <button class="delete-prod-btn text-red-500" data-id="${doc.id}">Excluir</button>
+                    </div></div>`;
+                });
+            });
+        }
+
+        async function uploadImage(file, productId) {
+            if (!file) return null;
+            const storageRef = ref(storage, `produtos/${productId}/${file.name}`);
+            saveProductBtn.textContent = "A enviar imagem...";
+            saveProductBtn.disabled = true;
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            saveProductBtn.textContent = "Salvar Produto";
+            saveProductBtn.disabled = false;
+            return downloadURL;
+        }
+
+        function resetProductForm() {
+            productForm.reset();
+            productForm.querySelector('h3').textContent = "Novo Produto";
+            productForm['product-id'].value = '';
+            productForm['current-image-url'].value = '';
+            productForm['product-id-unico'].readOnly = false;
+            cancelEditProdBtn.classList.add('hidden');
+            imagePreview.textContent = '';
+        }
+
+        categoryList.addEventListener('click', e => {
+            const catId = e.target.dataset.id;
+            if (e.target.classList.contains('edit-cat-btn')) {
+                const cat = categories.find(c => c.id === catId);
+                categoryForm.querySelector('h3').textContent = "Editar Categoria";
+                categoryForm['category-id'].value = cat.id;
+                categoryForm['category-name'].value = cat.nome;
+                categoryForm['category-order'].value = cat.ordem;
+                cancelEditCatBtn.classList.remove('hidden');
+            }
+            if (e.target.classList.contains('delete-cat-btn')) {
+                showConfirm('Tem a certeza que quer excluir esta categoria?', async () => {
+                    await deleteDoc(doc(db, 'categorias', catId));
+                    showToast("Categoria excluída.");
+                });
+            }
+        });
+        cancelEditCatBtn.addEventListener('click', resetCategoryForm);
+        categoryForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const id = categoryForm['category-id'].value;
+            const data = { nome: categoryForm['category-name'].value, ordem: Number(categoryForm['category-order'].value) };
+            if (id) await updateDoc(doc(db, 'categorias', id), data);
+            else await addDoc(collection(db, 'categorias'), data);
+            resetCategoryForm();
+            showToast("Categoria salva com sucesso.");
+        });
+
+        productList.addEventListener('click', e => {
+            const prodId = e.target.dataset.id;
+            if (e.target.classList.contains('edit-prod-btn')) {
+                const prod = products.find(p => p.id === prodId);
+                productForm.querySelector('h3').textContent = "Editar Produto";
+                productForm['product-id'].value = prod.id;
+                productForm['product-category'].value = prod.categoriaId;
+                productForm['product-name'].value = prod.nome;
+                productForm['product-id-unico'].value = prod.idUnico;
+                productForm['product-id-unico'].readOnly = true;
+                productForm['product-description'].value = prod.descricao;
+                productForm['product-price'].value = prod.preco;
+                productForm['current-image-url'].value = prod.imagemUrl || '';
+                imagePreview.textContent = prod.imagemUrl ? `Imagem atual: ${prod.imagemUrl.substring(0, 30)}...` : 'Nenhuma imagem associada.';
+                cancelEditProdBtn.classList.remove('hidden');
+            }
+            if (e.target.classList.contains('delete-prod-btn')) {
+                showConfirm('Tem a certeza que quer excluir este produto?', async () => {
+                    await deleteDoc(doc(db, 'produtos', prodId));
+                    showToast('Produto excluído.');
+                });
+            }
+        });
+
+        cancelEditProdBtn.addEventListener('click', resetProductForm);
+        productForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const imageFile = productForm['product-image-file'].files[0];
+            const idUnico = productForm['product-id-unico'].value;
+            let imageUrl = productForm['current-image-url'].value;
+            if (imageFile) imageUrl = await uploadImage(imageFile, idUnico);
+            
+            const id = productForm['product-id'].value;
+            const data = { categoriaId: productForm['product-category'].value, nome: productForm['product-name'].value, idUnico: idUnico, descricao: productForm['product-description'].value, preco: Number(productForm['product-price'].value), imagemUrl: imageUrl || '' };
+            
+            if (id) await updateDoc(doc(db, 'produtos', id), data);
+            else await addDoc(collection(db, 'produtos'), data);
+            resetProductForm();
+            showToast("Produto salvo com sucesso.");
+        });
+    </script>
+</body>
+</html>
+
