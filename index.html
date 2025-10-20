@@ -480,7 +480,7 @@
                 const orderData = { numeroPedido, cliente: { nome, telefone, cpf }, itens: window.carrinho, total: calcularTotal(), status: 'Recebido', observacoes, timestamp: serverTimestamp(), agendamento };
                 const docRef = await addDoc(collection(db, "pedidos"), orderData);
                 
-                let msg = `Olá! 👋 Novo Pedido (#${numeroPedido}) de *Drei Herzen Pizzaria*:\n\n*CLIENTE:*\n- Nome: ${nome}\n- Telefone: ${telefone}\n`;
+                let msg = `Olá! Novo Pedido (#${numeroPedido}) de *Drei Herzen Pizzaria*:\n\n*CLIENTE:*\n- Nome: ${nome}\n- Telefone: ${telefone}\n`;
                 if (cpf) msg += `- CPF: ${cpf}\n`;
                 if (observacoes) msg += `- Obs: ${observacoes}\n`;
                 msg += agendamentoMsg;
