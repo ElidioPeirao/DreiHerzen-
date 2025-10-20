@@ -10,6 +10,7 @@
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #FDFBF5; color: #3d3d3d; }
         .font-serif { font-family: 'Cinzel', serif; }
+        .tab-button { border-bottom-color: transparent; } /* Adicionado para corrigir a barra de navegação */
         .tab-active { border-bottom-color: #991b1b; color: #991b1b; font-weight: 700; }
         .card-product { border: 1px solid #EAE3D8; transition: box-shadow 0.3s ease-in-out; }
         .btn-primary { background-color: #991b1b; color: white; }
@@ -423,7 +424,6 @@
                 modalRevisao.classList.add('hidden');
                 modalCliente.innerHTML = `<div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md"><h2 class="font-serif text-2xl font-bold mb-4 text-stone-800">Seus Dados</h2><form id="form-cliente"></form></div>`;
                 const formCliente = document.getElementById('form-cliente');
-                // <!-- CORREÇÃO INICIA AQUI: O formulário foi alterado para mostrar apenas o agendamento -->
                 formCliente.innerHTML = `<div class="space-y-4">
                     <div><label for="nome" class="block text-sm font-medium">Nome Completo</label><input type="text" id="nome" required class="mt-1 block w-full border rounded-md p-2"></div>
                     <div><label for="telefone" class="block text-sm font-medium">Telefone (WhatsApp)</label><input type="tel" id="telefone" required class="mt-1 block w-full border rounded-md p-2"></div>
@@ -439,7 +439,6 @@
                 </div>
                 <div class="mt-8"><button type="submit" class="btn-whatsapp w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center text-lg"><i class="fab fa-whatsapp mr-3"></i>Enviar Pedido</button></div>`;
                 
-                // Define a data mínima para o agendamento como sendo hoje
                 document.getElementById('schedule-date').min = new Date().toISOString().split('T')[0];
                 
                 modalCliente.classList.remove('hidden');
@@ -457,15 +456,12 @@
             const cpf = document.getElementById('cpf').value.trim();
             const observacoes = document.getElementById('observacoes').value.trim();
             
-            // <!-- CORREÇÃO INICIA AQUI: Removida a verificação de "agora" vs "agendar" -->
             let agendamento = null, agendamentoMsg = '';
             const scheduleDate = document.getElementById('schedule-date').value;
             const scheduleTime = document.getElementById('schedule-time').value;
 
-            // O atributo "required" nos inputs já impede o envio do formulário, mas mantemos a validação.
             if (!scheduleDate || !scheduleTime) {
                 console.error("Data e hora do agendamento são obrigatórios.");
-                // O código original usava um alert(), que deve ser evitado.
                 return;
             }
 
@@ -473,7 +469,6 @@
             const formattedDate = `${day}/${month}/${year}`;
             agendamento = { data: formattedDate, hora: scheduleTime };
             agendamentoMsg = `\n\n*AGENDADO PARA:*\n- Data: ${formattedDate}\n- Hora: ${scheduleTime}`;
-            // <!-- CORREÇÃO TERMINA AQUI -->
 
             try {
                 const numeroPedido = String(new Date().getTime()).slice(-6);
@@ -505,8 +500,6 @@
 
             } catch (error) {
                 console.error("Erro ao salvar pedido: ", error);
-                // O código original usava um alert(), que deve ser evitado.
-                // Idealmente, mostre um modal de erro aqui.
             }
         }
         
@@ -546,7 +539,8 @@
                 const category = { id: doc.id, ...doc.data() };
                 const tabButton = document.createElement('button');
                 tabButton.id = `tab-${category.id}`;
-                tabButton.className = `tab-button w-full py-4 text-center border-b-2 transition ${isFirstTab ? 'tab-active' : 'border-transparent'}`;
+                // CORREÇÃO: Removida a lógica de 'border-transparent' do JavaScript
+                tabButton.className = `tab-button w-full py-4 text-center border-b-2 transition ${isFirstTab ? 'tab-active' : ''}`;
                 tabButton.textContent = category.nome;
                 navTabs.appendChild(tabButton);
                 const section = document.createElement('section');
@@ -595,3 +589,4 @@
     </script>
 </body>
 </html>
+
