@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fazer Pedido - Restaurante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .smooth-transition { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="text-gray-800 pb-24">
+
+    <!-- Tela Inicial: Escolher Nome -->
+    <div id="nome-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6">
+        <div class="text-center mb-8">
+            <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo do Restaurante" class="w-32 h-32 mx-auto mb-4 rounded-full object-cover shadow-md">
+            <h1 class="text-3xl font-bold text-gray-800">Bem-vindo!</h1>
+            <p class="text-gray-500 mt-2">Por favor, informe o seu nome para começar.</p>
+        </div>
+        <div class="w-full max-w-sm">
+            <input type="text" id="nome-input" placeholder="O seu nome" class="w-full text-center text-3xl p-4 border-2 border-orange-300 rounded-xl focus:outline-none focus:border-orange-500 mb-4 shadow-sm">
+            <button onclick="entrarNome()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg smooth-transition">
+                Ver Cardápio
+            </button>
+        </div>
+    </div>
+
+    <!-- Header do Cardápio -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo" class="w-10 h-10 rounded-full object-cover shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Cardápio</h2>
+                    <span id="display-nome" class="text-sm font-semibold text-orange-500 bg-orange-100 px-2 py-1 rounded-md">Cliente --</span>
+                </div>
+            </div>
+            <button onclick="trocarNome()" class="text-sm text-gray-500 hover:text-gray-800 underline">Alterar Nome</button>
+        </div>
+    </header>
+
+    <!-- Lista de Produtos -->
+    <main class="max-w-3xl mx-auto px-4 py-6">
+        <div id="loading" class="text-center py-10 text-gray-500">
+            <i class="fas fa-spinner fa-spin text-3xl mb-2"></i>
+            <p>Carregando cardápio...</p>
+        </div>
+        <div id="produtos-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+            <!-- Produtos renderizados via JS -->
+        </div>
+    </main>
+
+    <!-- Carrinho Flutuante -->
+    <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 transform translate-y-full smooth-transition z-40">
+        <div class="max-w-3xl mx-auto flex justify-between items-center">
+            <div>
+                <span class="block text-sm text-gray-500">Total do Pedido</span>
+                <span id="cart-total" class="text-2xl font-bold text-gray-800">R$ 0,00</span>
+                <span id="cart-count" class="text-sm font-medium text-orange-500 ml-2">0 itens</span>
+            </div>
+            <button onclick="abrirModalPedido()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-md smooth-transition">
+                Finalizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Resumo do Pedido -->
+    <div id="modal-pedido" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center">
+        <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 transform transition-transform shadow-2xl overflow-y-auto max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Resumo do Pedido</h3>
+                <button onclick="fecharModalPedido()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="modal-itens" class="space-y-3 mb-6 divide-y divide-gray-100">
+                <!-- Itens do carrinho aqui -->
+            </div>
+            <div class="border-t border-gray-200 pt-4 mb-6 flex justify-between items-center">
+                <span class="font-bold text-gray-600">Total:</span>
+                <span id="modal-total" class="text-2xl font-bold text-gray-800">R$ 0,00</span>
+            </div>
+            <button id="btn-confirmar-pedido" onclick="enviarPedido()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg smooth-transition flex justify-center items-center">
+                <span>Confirmar e Fazer Pedido</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notificação -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 transition-opacity duration-300 z-50 pointer-events-none">
+        Mensagem aqui
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
+            authDomain: "dreiherzen-c7640.firebaseapp.com",
+            projectId: "dreiherzen-c7640",
+            storageBucket: "dreiherzen-c7640.firebasestorage.app",
+            messagingSenderId: "324520974615",
+            appId: "1:324520974615:web:51e4abd4d45add5d9eff52",
+            measurementId: "G-LVDE2470BP"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Caminhos simplificados para o seu próprio banco de dados
+        const PATH_PRODUTOS = 'ProdutosSis';
+        const PATH_PEDIDOS = 'PedidosSis';
+
+        let currentUser = null;
+        let produtos = [];
+        let carrinho = [];
+        let nomeCliente = null;
+
+        // Elementos da UI
+        const produtosListEl = document.getElementById('produtos-list');
+        const loadingEl = document.getElementById('loading');
+        const cartBarEl = document.getElementById('cart-bar');
+        const cartTotalEl = document.getElementById('cart-total');
+        const cartCountEl = document.getElementById('cart-count');
+        const toastEl = document.getElementById('toast');
+
+        // Inicialização e Autenticação
+        const init = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Erro na autenticação:", error);
+                showToast("Erro ao conectar ao sistema.");
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                carregarProdutos();
+            }
+        });
+
+        // Funções de UI
+        window.entrarNome = () => {
+            const input = document.getElementById('nome-input').value.trim();
+            if (!input) {
+                showToast("Por favor, informe o seu nome.");
+                return;
+            }
+            nomeCliente = input;
+            document.getElementById('display-nome').textContent = nomeCliente;
+            document.getElementById('nome-screen').style.display = 'none';
+        };
+
+        window.trocarNome = () => {
+            document.getElementById('nome-screen').style.display = 'flex';
+            document.getElementById('nome-input').value = '';
+            carrinho = [];
+            atualizarCarrinho();
+        };
+
+        const showToast = (msg) => {
+            toastEl.textContent = msg;
+            toastEl.style.opacity = '1';
+            setTimeout(() => { toastEl.style.opacity = '0'; }, 3000);
+        };
+
+        const formatMoney = (value) => {
+            return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        // Lógica de Dados
+        const carregarProdutos = () => {
+            if (!currentUser) return;
+            const ref = collection(db, PATH_PRODUTOS);
+            
+            onSnapshot(ref, (snapshot) => {
+                produtos = [];
+                snapshot.forEach(doc => {
+                    produtos.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarProdutos();
+            }, (error) => {
+                console.error("Erro ao buscar produtos:", error);
+                loadingEl.innerHTML = "<p class='text-red-500'>Erro ao carregar cardápio.</p>";
+            });
+        };
+
+        const renderizarProdutos = () => {
+            loadingEl.style.display = 'none';
+            produtosListEl.classList.remove('hidden');
+            produtosListEl.innerHTML = '';
+
+            if (produtos.length === 0) {
+                produtosListEl.innerHTML = '<p class="col-span-full text-center text-gray-500 py-8">Nenhum produto cadastrado no momento.</p>';
+                return;
+            }
+
+            produtos.forEach(prod => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center';
+                div.innerHTML = `
+                    <div class="flex-1 pr-4">
+                        <h3 class="font-bold text-gray-800 text-lg">${prod.nome}</h3>
+                        ${prod.descricao ? `<p class="text-sm text-gray-500 mb-2 leading-tight">${prod.descricao}</p>` : ''}
+                        <p class="text-orange-600 font-semibold">${formatMoney(prod.preco)}</p>
+                    </div>
+                    <button onclick="adicionarAoCarrinho('${prod.id}')" class="bg-gray-100 hover:bg-orange-100 text-orange-500 w-10 h-10 rounded-full flex justify-center items-center smooth-transition shrink-0">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                `;
+                produtosListEl.appendChild(div);
+            });
+        };
+
+        window.adicionarAoCarrinho = (idProduto) => {
+            const produto = produtos.find(p => p.id === idProduto);
+            if (!produto) return;
+
+            const itemExistente = carrinho.find(item => item.produto.id === idProduto);
+            if (itemExistente) {
+                itemExistente.quantidade += 1;
+            } else {
+                carrinho.push({ produto: produto, quantidade: 1 });
+            }
+            
+            showToast(`${produto.nome} adicionado!`);
+            atualizarCarrinho();
+        };
+
+        window.removerDoCarrinho = (idProduto) => {
+            const index = carrinho.findIndex(item => item.produto.id === idProduto);
+            if (index !== -1) {
+                if (carrinho[index].quantidade > 1) {
+                    carrinho[index].quantidade -= 1;
+                } else {
+                    carrinho.splice(index, 1);
+                }
+            }
+            atualizarCarrinho();
+            renderizarModalPedido(); // Atualiza modal se estiver aberto
+        };
+
+        const atualizarCarrinho = () => {
+            const total = carrinho.reduce((acc, item) => acc + (item.produto.preco * item.quantidade), 0);
+            const qtd = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
+
+            cartTotalEl.textContent = formatMoney(total);
+            cartCountEl.textContent = `${qtd} item${qtd !== 1 ? 's' : ''}`;
+
+            if (qtd > 0) {
+                cartBarEl.classList.remove('translate-y-full');
+            } else {
+                cartBarEl.classList.add('translate-y-full');
+                fecharModalPedido();
+            }
+        };
+
+        // Modal de Resumo
+        window.abrirModalPedido = () => {
+            if (carrinho.length === 0) return;
+            renderizarModalPedido();
+            document.getElementById('modal-pedido').classList.remove('hidden');
+        };
+
+        window.fecharModalPedido = () => {
+            document.getElementById('modal-pedido').classList.add('hidden');
+        };
+
+        const renderizarModalPedido = () => {
+            const modalItens = document.getElementById('modal-itens');
+            modalItens.innerHTML = '';
+            
+            let total = 0;
+
+            carrinho.forEach(item => {
+                total += item.produto.preco * item.quantidade;
+                const div = document.createElement('div');
+                div.className = 'py-2 flex justify-between items-center';
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <span class="font-semibold text-gray-800">${item.produto.nome}</span>
+                        <div class="text-sm text-gray-500">${formatMoney(item.produto.preco)} x ${item.quantidade}</div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="font-bold text-gray-800">${formatMoney(item.produto.preco * item.quantidade)}</span>
+                        <button onclick="removerDoCarrinho('${item.produto.id}')" class="text-red-400 hover:text-red-600 p-1">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                modalItens.appendChild(div);
+            });
+
+            document.getElementById('modal-total').textContent = formatMoney(total);
+        };
+
+        window.enviarPedido = async () => {
+            if (!currentUser || carrinho.length === 0 || !nomeCliente) return;
+
+            const btn = document.getElementById('btn-confirmar-pedido');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Enviando...';
+
+            const total = carrinho.reduce((acc, item) => acc + (item.produto.preco * item.quantidade), 0);
+            
+            // Preparar dados limpos para o Firestore
+            const itensPedido = carrinho.map(item => ({
+                idProduto: item.produto.id,
+                nome: item.produto.nome,
+                preco: item.produto.preco,
+                quantidade: item.quantidade
+            }));
+
+            const novoPedido = {
+                cliente: nomeCliente,
+                itens: itensPedido,
+                total: total,
+                status: 'pendente', // pendente, pronto
+                timestamp: Date.now() // Usando timestamp local para simplificar ordenação sem complex queries
+            };
+
+            try {
+                const ref = collection(db, PATH_PEDIDOS);
+                await addDoc(ref, novoPedido);
+                
+                showToast("Pedido enviado com sucesso para a cozinha!");
+                carrinho = [];
+                atualizarCarrinho();
+                fecharModalPedido();
+                
+                // Redirigir para feedback visual
+                document.getElementById('nome-screen').style.display = 'flex';
+                document.getElementById('nome-screen').innerHTML = `
+                    <div class="text-center w-full max-w-sm">
+                        <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Pedido Recebido!</h2>
+                        <p class="text-gray-500 mb-8">A cozinha já está a preparar o seu pedido, <b>${nomeCliente}</b>.</p>
+                        <button onclick="location.reload()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl">Fazer Novo Pedido</button>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Erro ao enviar pedido:", error);
+                showToast("Erro ao enviar pedido. Tente novamente.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Confirmar e Fazer Pedido';
+            }
+        };
+
+        // Iniciar
+        init();
+
+    </script>
+</body>
+</html>
