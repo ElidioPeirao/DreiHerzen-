@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerência - Restaurante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #FDFBF5; color: #3d3d3d; }
+        .font-serif { font-family: 'Cinzel', serif; }
+        .tab-button { border-bottom-color: transparent; }
+        .tab-active { border-bottom: 3px solid #991b1b; color: #991b1b; font-weight: 700; }
+        .card-product { border: 1px solid #EAE3D8; transition: box-shadow 0.3s ease-in-out; }
+        .btn-primary { background-color: #991b1b; color: white; }
+        .btn-primary:hover { background-color: #7f1d1d; }
+        .quantity-control button { width: 32px; height: 32px; border: 1px solid #ddd; border-radius: 50%; background-color: white; }
+        .quantity-control input { width: 40px; font-size: 1.1rem; border: none; background-color: transparent; text-align: center; font-weight: 700; color: #333; }
+        .image-overlay-container { position: relative; cursor: pointer; }
+        .image-overlay { position: absolute; inset: 0; background-color: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; }
+        .image-overlay-container:hover .image-overlay { opacity: 1; }
+        .toast { opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; visibility: hidden; }
+        .toast-visible { opacity: 1; transform: translateY(0); visibility: visible; }
+        .btn-whatsapp { background-color: #25D366; }
+        .status-step { flex: 1; text-align: center; }
+        .status-dot { width: 20px; height: 20px; border-radius: 50%; margin: 0 auto 5px; background-color: #e5e7eb; border: 2px solid #d1d5db; }
+        .status-line { flex-grow: 1; height: 2px; background-color: #e5e7eb; }
+        .status-step.active .status-dot { background-color: #f59e0b; border-color: #d97706; }
+        .status-step.completed .status-dot { background-color: #10b981; border-color: #059669; }
+        .status-step.completed .status-line { background-color: #10b981; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        .home-header {
+            background-image: url('https://www.transparenttextures.com/patterns/concrete-wall-2.png');
+            background-color: #f9f6f0;
+        }
+        .decorative-line {
+            width: 150px;
+            height: 1px;
+            background-color: #d1d5db;
+            margin: 1.5rem auto;
+            position: relative;
+        }
+        .decorative-line::before {
+            content: '◆';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #FDFBF5;
+            padding: 0 10px;
+            color: #991b1b;
+            font-size: 1rem;
+        }
+        .section-bg {
+             background-color: rgba(245, 245, 244, 0.5);
+        }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col">
+
+    <!-- Tela de Login -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+            <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo do Restaurante" class="w-24 h-24 mx-auto mb-4 rounded-full object-cover shadow-md">
+            <h2 class="font-serif text-2xl font-bold mb-6 text-slate-800">Acesso Restrito</h2>
+            <input type="password" id="senha-input" placeholder="Senha da Gerência" class="w-full p-3 border rounded-lg mb-4 text-center focus:outline-none focus:ring-2 focus:ring-[#991b1b]">
+            <button onclick="fazerLogin()" class="w-full btn-primary font-bold py-3 rounded-lg transition-colors">
+                Entrar
+            </button>
+            <p id="login-error" class="text-red-500 text-sm mt-3 hidden">Senha incorreta!</p>
+            <p class="text-xs text-gray-400 mt-4">Dica: A senha padrão é admin123</p>
+        </div>
+    </div>
+
+    <!-- Interface Principal (Escondida até o login) -->
+    <div id="main-app" class="hidden flex-1 flex flex-col h-full overflow-hidden section-bg">
+        
+        <!-- Header e Abas -->
+        <header class="bg-white shadow-sm z-10 home-header">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6">
+                <div class="flex justify-between items-center py-4 border-b border-gray-200">
+                    <h1 class="font-serif text-xl font-bold text-slate-800 flex items-center">
+                        <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo" class="w-8 h-8 rounded-full object-cover mr-3 shadow-sm"> Painel do Restaurante
+                    </h1>
+                    <button onclick="location.reload()" class="text-slate-500 hover:text-slate-800 text-sm">
+                        <i class="fas fa-sign-out-alt"></i> Sair
+                    </button>
+                </div>
+                <div class="flex space-x-4 pt-2 overflow-x-auto">
+                    <button onclick="mudarAba('pedidos')" id="tab-pedidos" class="pb-3 px-2 tab-active whitespace-nowrap">
+                        <i class="fas fa-bell mr-1"></i> Pedidos dos Clientes
+                    </button>
+                    <button onclick="mudarAba('historico')" id="tab-historico" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
+                        <i class="fas fa-history mr-1"></i> Histórico
+                    </button>
+                    <button onclick="mudarAba('produtos')" id="tab-produtos" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
+                        <i class="fas fa-box-open mr-1"></i> Cadastro de Produtos
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div class="max-w-6xl mx-auto">
+                
+                <!-- ABA: PEDIDOS -->
+                <div id="view-pedidos" class="block">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-serif text-2xl font-bold text-slate-800">Fila de Pedidos</h2>
+                        <span id="badge-pedidos" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold">0 Ativos</span>
+                    </div>
+                    
+                    <div id="loading-pedidos" class="text-center py-10 text-slate-500">
+                        <i class="fas fa-circle-notch fa-spin text-3xl mb-2"></i>
+                        <p>Buscando pedidos...</p>
+                    </div>
+
+                    <div id="lista-pedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Pedidos renderizados via JS -->
+                    </div>
+                </div>
+
+                <!-- ABA: HISTÓRICO -->
+                <div id="view-historico" class="hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-serif text-2xl font-bold text-slate-800">Histórico de Pedidos</h2>
+                        <span id="badge-historico" class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold">0 Retirados</span>
+                    </div>
+                    <div id="lista-historico" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Histórico renderizados via JS -->
+                    </div>
+                </div>
+
+                <!-- ABA: PRODUTOS -->
+                <div id="view-produtos" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Formulário de Cadastro -->
+                        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-fit card-product">
+                            <h2 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2">Novo Produto</h2>
+                            <form id="form-produto" onsubmit="salvarProduto(event)">
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nome do Produto</label>
+                                    <input type="text" id="prod-nome" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: Hambúrguer Clássico">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Descrição / Ingredientes</label>
+                                    <textarea id="prod-descricao" rows="2" class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b] resize-none" placeholder="Ex: Pão brioche, carne 200g, queijo cheddar..."></textarea>
+                                </div>
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Preço (R$)</label>
+                                    <input type="number" id="prod-preco" step="0.01" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: 25.50">
+                                </div>
+                                <button type="submit" id="btn-salvar-prod" class="w-full btn-primary font-bold py-2 rounded transition-colors flex justify-center items-center">
+                                    Cadastrar Produto
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Lista de Produtos Cadastrados -->
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product">
+                            <h2 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2">Produtos Cadastrados</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-600 text-sm">
+                                            <th class="p-3 border-b">Nome</th>
+                                            <th class="p-3 border-b w-32">Preço</th>
+                                            <th class="p-3 border-b w-16 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-produtos" class="text-sm divide-y divide-slate-100">
+                                        <!-- Produtos renderizados aqui -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
+            authDomain: "dreiherzen-c7640.firebaseapp.com",
+            projectId: "dreiherzen-c7640",
+            storageBucket: "dreiherzen-c7640.firebasestorage.app",
+            messagingSenderId: "324520974615",
+            appId: "1:324520974615:web:51e4abd4d45add5d9eff52",
+            measurementId: "G-LVDE2470BP"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Usar as coleções na raiz, ideais para o seu projeto
+        const PATH_PRODUTOS = 'ProdutosSis';
+        const PATH_PEDIDOS = 'PedidosSis';
+
+        let currentUser = null;
+        let produtos = [];
+        let pedidos = [];
+
+        // Inicia a autenticação do Firebase em segundo plano imediatamente
+        const iniciarSistema = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Erro na autenticação Firebase:", error);
+                alert("Por favor, ative o método de login 'Anónimo' na secção Authentication do seu Firebase.");
+            }
+        };
+        iniciarSistema();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                // Se já passou do ecrã de palavra-passe, busca os dados
+                if (!document.getElementById('main-app').classList.contains('hidden')) {
+                    escutarProdutos();
+                    escutarPedidos();
+                }
+            }
+        });
+
+        // Sistema de Login Simples
+        window.fazerLogin = () => {
+            const senha = document.getElementById('senha-input').value;
+            if (senha === 'admin123') {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden');
+                
+                // Se a autenticação já terminou em segundo plano, carrega os dados
+                if (currentUser) {
+                    escutarProdutos();
+                    escutarPedidos();
+                }
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        };
+
+        // Adiciona evento de "Enter" no input de senha
+        document.getElementById('senha-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') window.fazerLogin();
+        });
+
+        // Controle de Abas
+        window.mudarAba = (aba) => {
+            const abas = ['pedidos', 'produtos', 'historico'];
+            abas.forEach(a => {
+                document.getElementById(`view-${a}`).classList.toggle('hidden', a !== aba);
+                const tab = document.getElementById(`tab-${a}`);
+                if (a === aba) {
+                    tab.className = 'pb-3 px-2 tab-active whitespace-nowrap';
+                } else {
+                    tab.className = 'pb-3 px-2 tab-inactive tab-button whitespace-nowrap';
+                }
+            });
+        };
+
+        const formatMoney = (value) => {
+            return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const formatTime = (timestamp) => {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' });
+        };
+
+        // --- GERENCIAMENTO DE PRODUTOS ---
+
+        const escutarProdutos = () => {
+            const ref = collection(db, PATH_PRODUTOS);
+            onSnapshot(ref, (snapshot) => {
+                produtos = [];
+                snapshot.forEach(doc => {
+                    produtos.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarTabelaProdutos();
+            }, (error) => console.error("Erro produtos:", error));
+        };
+
+        const renderizarTabelaProdutos = () => {
+            const tbody = document.getElementById('tabela-produtos');
+            tbody.innerHTML = '';
+
+            if (produtos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Nenhum produto cadastrado.</td></tr>';
+                return;
+            }
+
+            produtos.forEach(prod => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3">
+                        <div class="font-medium text-slate-800">${prod.nome}</div>
+                        ${prod.descricao ? `<div class="text-xs text-slate-500 mt-1 line-clamp-2">${prod.descricao}</div>` : ''}
+                    </td>
+                    <td class="p-3 text-orange-600 font-semibold align-top">${formatMoney(prod.preco)}</td>
+                    <td class="p-3 text-center align-top">
+                        <button onclick="excluirProduto('${prod.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Excluir">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.salvarProduto = async (e) => {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                alert("A ligar ao banco de dados... Por favor, tenta novamente num instante.");
+                return;
+            }
+
+            const nome = document.getElementById('prod-nome').value.trim();
+            const descricao = document.getElementById('prod-descricao').value.trim();
+            const preco = parseFloat(document.getElementById('prod-preco').value);
+            const btn = document.getElementById('btn-salvar-prod');
+
+            if (!nome || isNaN(preco)) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...';
+
+            try {
+                const ref = collection(db, PATH_PRODUTOS);
+                await addDoc(ref, { nome, descricao, preco });
+                document.getElementById('form-produto').reset();
+            } catch (error) {
+                console.error("Erro ao salvar produto:", error);
+                alert("Erro de permissões no SEU Firebase!\n\nVá ao console do Firebase > Firestore Database > Rules e altere para:\n\nallow read, write: if true;");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Cadastrar Produto';
+            }
+        };
+
+        window.excluirProduto = async (id) => {
+            if (!currentUser || !confirm("Tem certeza que deseja excluir este produto?")) return;
+            try {
+                await deleteDoc(doc(db, PATH_PRODUTOS, id));
+            } catch (error) {
+                console.error("Erro ao excluir:", error);
+                alert("Erro ao excluir produto.");
+            }
+        };
+
+        // --- GERENCIAMENTO DE PEDIDOS ---
+
+        const escutarPedidos = () => {
+            const ref = collection(db, PATH_PEDIDOS);
+            onSnapshot(ref, (snapshot) => {
+                pedidos = [];
+                snapshot.forEach(document => {
+                    pedidos.push({ id: document.id, ...document.data() });
+                });
+                renderizarPedidos();
+            }, (error) => console.error("Erro pedidos:", error));
+        };
+
+        const renderizarPedidos = () => {
+            document.getElementById('loading-pedidos').style.display = 'none';
+            const lista = document.getElementById('lista-pedidos');
+            const listaHistorico = document.getElementById('lista-historico');
+            lista.innerHTML = '';
+            listaHistorico.innerHTML = '';
+
+            // Agora filtramos 'pendente' OU 'pronto' para a fila principal
+            const ativos = pedidos
+                .filter(p => p.status === 'pendente' || p.status === 'pronto')
+                .sort((a, b) => a.timestamp - b.timestamp);
+                
+            // O histórico agora recebe apenas os 'retirados'
+            const retirados = pedidos
+                .filter(p => p.status === 'retirado')
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            document.getElementById('badge-pedidos').textContent = `${ativos.length} Ativo${ativos.length !== 1 ? 's' : ''}`;
+            document.getElementById('badge-historico').textContent = `${retirados.length} Retirado${retirados.length !== 1 ? 's' : ''}`;
+
+            if (ativos.length === 0) {
+                lista.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+                        <i class="fas fa-clipboard-check text-4xl text-slate-300 mb-3"></i>
+                        <p class="text-slate-500 font-medium">Nenhum pedido ativo no momento.</p>
+                        <p class="text-sm text-slate-400">Os novos pedidos aparecerão aqui automaticamente.</p>
+                    </div>`;
+            } else {
+                ativos.forEach(pedido => {
+                    // Verifica o status atual para alterar a UI
+                    const isPronto = pedido.status === 'pronto';
+                    
+                    const topColor = isPronto ? 'background-color: #f59e0b;' : 'background-color: #991b1b;';
+                    const iconColor = isPronto ? 'text-[#f59e0b]' : 'text-[#991b1b]';
+                    const badgeHtml = isPronto 
+                        ? '<span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded ml-2 uppercase">Pronto para Retirar</span>'
+                        : '<span class="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded ml-2 uppercase">Na Cozinha</span>';
+                    
+                    const btnClass = isPronto ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'btn-whatsapp hover:bg-green-600 text-white';
+                    const btnIcon = isPronto ? 'fas fa-hand-holding' : 'fas fa-check-circle';
+                    const btnText = isPronto ? 'Pedido Retirado' : 'Pedido Pronto';
+                    const nextStatus = isPronto ? 'retirado' : 'pronto';
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative card-product';
+                    
+                    card.innerHTML = `
+                        <div class="h-2 w-full" style="${topColor}"></div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-serif text-2xl font-black text-slate-800 flex items-center">
+                                        <i class="fas fa-user-circle ${iconColor} mr-2"></i> ${pedido.cliente || 'Cliente'}
+                                    </h3>
+                                    <div class="flex items-center mt-1">
+                                        <p class="text-xs text-slate-400"><i class="far fa-clock"></i> ${formatTime(pedido.timestamp)}</p>
+                                        ${badgeHtml}
+                                    </div>
+                                </div>
+                                <div class="bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded text-sm">
+                                    ${formatMoney(pedido.total)}
+                                </div>
+                            </div>
+                            
+                            <div class="flex-1 bg-slate-50 p-3 rounded-lg mb-4 border border-slate-100">
+                                <ul class="space-y-2 text-sm text-slate-700">
+                                    ${pedido.itens.map(item => `
+                                        <li class="flex justify-between border-b border-slate-200 last:border-0 pb-1 last:pb-0">
+                                            <span><span class="font-bold ${iconColor}">${item.quantidade}x</span> ${item.nome}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+
+                            <button onclick="mudarStatusPedido('${pedido.id}', '${nextStatus}')" class="w-full ${btnClass} font-bold py-3 rounded-lg shadow-sm transition-colors flex justify-center items-center">
+                                <i class="${btnIcon} mr-2"></i> ${btnText}
+                            </button>
+                        </div>
+                    `;
+                    lista.appendChild(card);
+                });
+            }
+
+            // Renderizar Histórico (Pedidos Retirados)
+            if (retirados.length === 0) {
+                listaHistorico.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+                        <i class="fas fa-history text-4xl text-slate-300 mb-3"></i>
+                        <p class="text-slate-500 font-medium">O histórico está vazio.</p>
+                        <p class="text-sm text-slate-400">Pedidos finalizados e retirados aparecerão aqui.</p>
+                    </div>`;
+            } else {
+                retirados.forEach(pedido => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative opacity-75 hover:opacity-100 transition-opacity card-product';
+                    
+                    card.innerHTML = `
+                        <div class="h-2 w-full bg-slate-400"></div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-serif text-xl font-bold text-slate-800 flex items-center">
+                                        <i class="fas fa-user-circle text-slate-400 mr-2"></i> ${pedido.cliente || 'Cliente'}
+                                    </h3>
+                                    <p class="text-xs text-slate-400 mt-1"><i class="far fa-clock"></i> ${formatTime(pedido.timestamp)}</p>
+                                </div>
+                                <div class="bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded text-sm">
+                                    ${formatMoney(pedido.total)}
+                                </div>
+                            </div>
+                            
+                            <div class="flex-1 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <ul class="space-y-2 text-sm text-slate-700">
+                                    ${pedido.itens.map(item => `
+                                        <li class="flex justify-between border-b border-slate-200 last:border-0 pb-1 last:pb-0">
+                                            <span class="text-slate-500"><span class="font-bold text-slate-400">${item.quantidade}x</span> ${item.nome}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            <div class="mt-4 text-center text-sm font-semibold text-slate-500">
+                                <i class="fas fa-check-double mr-1"></i> Finalizado e Retirado
+                            </div>
+                        </div>
+                    `;
+                    listaHistorico.appendChild(card);
+                });
+            }
+        };
+
+        // Função de avanço de status centralizada
+        window.mudarStatusPedido = async (id, novoStatus) => {
+            if (!currentUser) return;
+            try {
+                const ref = doc(db, PATH_PEDIDOS, id);
+                await updateDoc(ref, { status: novoStatus });
+            } catch (error) {
+                console.error("Erro ao atualizar pedido:", error);
+                alert("Erro ao atualizar o status do pedido.");
+            }
+        };
+
+    </script>
+</body>
+</html>
