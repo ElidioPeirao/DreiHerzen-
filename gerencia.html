@@ -57,6 +57,9 @@
         .section-bg {
              background-color: rgba(245, 245, 244, 0.5);
         }
+        /* Ocultar barra de rolagem na lista de categorias para ficar elegante */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="text-slate-800 h-screen flex flex-col">
@@ -209,7 +212,7 @@
                         <span id="badge-historico" class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold">0 Retirados</span>
                     </div>
 
-                    <!-- NOVO: Relatório de Vendas -->
+                    <!-- Relatório de Vendas -->
                     <div id="relatorio-vendas" class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product mb-8 hidden">
                         <h3 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2"><i class="fas fa-chart-pie text-[#991b1b] mr-2"></i>Relatório de Vendas</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -289,6 +292,12 @@
                         <!-- Lista de Produtos Cadastrados -->
                         <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product">
                             <h2 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2">Produtos Cadastrados</h2>
+                            
+                            <!-- Barra de Categorias -->
+                            <div id="categorias-bar-produtos-container" class="mb-4 hidden">
+                                <div id="categorias-bar-produtos" class="flex space-x-2 overflow-x-auto hide-scrollbar pb-2"></div>
+                            </div>
+
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
@@ -306,6 +315,28 @@
                             </div>
                         </div>
 
+                    </div>
+                </div>
+
+                <!-- ABA: SAÍDA MANUAL -->
+                <div id="view-saida" class="hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div>
+                            <h2 class="font-serif text-2xl font-bold text-slate-800">Saída Manual de Produtos</h2>
+                            <p class="text-sm text-slate-500 mt-1">Registe vendas de balcão rapidamente. Estes itens irão diretamente para o Histórico de Vendas.</p>
+                        </div>
+                        <button onclick="confirmarSaidaManual()" class="w-full sm:w-auto btn-primary font-bold py-3 px-6 rounded-xl shadow-md transition-colors flex justify-center items-center">
+                            <i class="fas fa-check-circle mr-2"></i> Confirmar Saída
+                        </button>
+                    </div>
+                    
+                    <!-- Barra de Categorias -->
+                    <div id="categorias-bar-saida-container" class="mb-6 hidden">
+                        <div id="categorias-bar-saida" class="flex space-x-2 overflow-x-auto hide-scrollbar pb-2"></div>
+                    </div>
+                    
+                    <div id="lista-saida-manual" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <!-- Produtos para saída renderizados via JS -->
                     </div>
                 </div>
 
@@ -356,23 +387,6 @@
                     </div>
                 </div>
 
-                <!-- ABA: SAÍDA MANUAL -->
-                <div id="view-saida" class="hidden">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="font-serif text-2xl font-bold text-slate-800">Saída Manual de Produtos</h2>
-                            <p class="text-sm text-slate-500 mt-1">Registe vendas de balcão rapidamente. Estes itens irão diretamente para o Histórico de Vendas.</p>
-                        </div>
-                        <button onclick="confirmarSaidaManual()" class="w-full sm:w-auto btn-primary font-bold py-3 px-6 rounded-xl shadow-md transition-colors flex justify-center items-center">
-                            <i class="fas fa-check-circle mr-2"></i> Confirmar Saída
-                        </button>
-                    </div>
-                    
-                    <div id="lista-saida-manual" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <!-- Produtos para saída renderizados via JS -->
-                    </div>
-                </div>
-
             </div>
         </main>
     </div>
@@ -405,6 +419,8 @@
         let produtos = [];
         let pedidos = [];
         let mesas = [];
+        let categoriaAtivaProdutos = 'Todas';
+        let categoriaAtivaSaida = 'Todas';
 
         // Inicia a autenticação do Firebase em segundo plano imediatamente
         const iniciarSistema = async () => {
@@ -488,21 +504,98 @@
                 snapshot.forEach(doc => {
                     produtos.push({ id: doc.id, ...doc.data() });
                 });
+                renderizarCategoriasAdmin();
+                renderizarCategoriasSaida();
                 renderizarTabelaProdutos();
                 renderizarSaidaManual();
             }, (error) => console.error("Erro produtos:", error));
+        };
+
+        const obterCategoriasUnicas = () => {
+            const categoriasSet = new Set();
+            produtos.forEach(p => {
+                const cat = p.categoria ? p.categoria.trim() : 'Diversos';
+                categoriasSet.add(cat);
+            });
+            return Array.from(categoriasSet).sort();
+        };
+
+        const renderizarCategoriasAdmin = () => {
+            const container = document.getElementById('categorias-bar-produtos-container');
+            const barra = document.getElementById('categorias-bar-produtos');
+            const categorias = obterCategoriasUnicas();
+
+            if (categorias.length <= 1 && categorias[0] === 'Diversos') {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            barra.innerHTML = '';
+            
+            const styleAtivo = 'bg-[#991b1b] text-white font-bold px-4 py-1.5 rounded-full text-xs shadow-md smooth-transition flex-shrink-0 border border-[#991b1b]';
+            const styleInativo = 'bg-white text-slate-600 font-medium px-4 py-1.5 rounded-full text-xs shadow-sm border border-[#EAE3D8] hover:bg-slate-50 smooth-transition flex-shrink-0';
+
+            const btnTodas = document.createElement('button');
+            btnTodas.className = categoriaAtivaProdutos === 'Todas' ? styleAtivo : styleInativo;
+            btnTodas.textContent = 'Todas';
+            btnTodas.onclick = () => { categoriaAtivaProdutos = 'Todas'; renderizarCategoriasAdmin(); renderizarTabelaProdutos(); };
+            barra.appendChild(btnTodas);
+
+            categorias.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = categoriaAtivaProdutos === cat ? styleAtivo : styleInativo;
+                btn.textContent = cat;
+                btn.onclick = () => { categoriaAtivaProdutos = cat; renderizarCategoriasAdmin(); renderizarTabelaProdutos(); };
+                barra.appendChild(btn);
+            });
+        };
+
+        const renderizarCategoriasSaida = () => {
+            const container = document.getElementById('categorias-bar-saida-container');
+            const barra = document.getElementById('categorias-bar-saida');
+            const categorias = obterCategoriasUnicas();
+
+            if (categorias.length <= 1 && categorias[0] === 'Diversos') {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            barra.innerHTML = '';
+            
+            const styleAtivo = 'bg-[#991b1b] text-white font-bold px-5 py-2 rounded-full text-sm shadow-md smooth-transition flex-shrink-0 border border-[#991b1b]';
+            const styleInativo = 'bg-white text-slate-600 font-medium px-5 py-2 rounded-full text-sm shadow-sm border border-[#EAE3D8] hover:bg-slate-50 smooth-transition flex-shrink-0';
+
+            const btnTodas = document.createElement('button');
+            btnTodas.className = categoriaAtivaSaida === 'Todas' ? styleAtivo : styleInativo;
+            btnTodas.textContent = 'Todas';
+            btnTodas.onclick = () => { categoriaAtivaSaida = 'Todas'; renderizarCategoriasSaida(); renderizarSaidaManual(); };
+            barra.appendChild(btnTodas);
+
+            categorias.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = categoriaAtivaSaida === cat ? styleAtivo : styleInativo;
+                btn.textContent = cat;
+                btn.onclick = () => { categoriaAtivaSaida = cat; renderizarCategoriasSaida(); renderizarSaidaManual(); };
+                barra.appendChild(btn);
+            });
         };
 
         const renderizarTabelaProdutos = () => {
             const tbody = document.getElementById('tabela-produtos');
             tbody.innerHTML = '';
 
-            if (produtos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Nenhum produto cadastrado.</td></tr>';
+            const produtosFiltrados = categoriaAtivaProdutos === 'Todas' 
+                ? produtos 
+                : produtos.filter(p => (p.categoria ? p.categoria.trim() : 'Diversos') === categoriaAtivaProdutos);
+
+            if (produtosFiltrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Nenhum produto cadastrado nesta categoria.</td></tr>';
                 return;
             }
 
-            produtos.forEach(prod => {
+            produtosFiltrados.forEach(prod => {
                 const tr = document.createElement('tr');
                 const estoque = prod.estoque !== undefined ? prod.estoque : 0;
                 const estoqueClass = estoque > 5 ? 'text-green-600' : (estoque > 0 ? 'text-orange-500' : 'text-red-500');
@@ -959,12 +1052,16 @@
             const lista = document.getElementById('lista-saida-manual');
             lista.innerHTML = '';
 
-            if (produtos.length === 0) {
-                lista.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-xl">Nenhum produto cadastrado para dar saída.</div>';
+            const produtosFiltrados = categoriaAtivaSaida === 'Todas' 
+                ? produtos 
+                : produtos.filter(p => (p.categoria ? p.categoria.trim() : 'Diversos') === categoriaAtivaSaida);
+
+            if (produtosFiltrados.length === 0) {
+                lista.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-xl">Nenhum produto para dar saída nesta categoria.</div>';
                 return;
             }
 
-            produtos.forEach(prod => {
+            produtosFiltrados.forEach(prod => {
                 const card = document.createElement('div');
                 const estoqueAtual = prod.estoque !== undefined ? prod.estoque : 0;
                 
