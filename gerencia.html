@@ -61,6 +61,74 @@
 </head>
 <body class="text-slate-800 h-screen flex flex-col">
 
+    <!-- Modal de Confirmação de Exclusão -->
+    <div id="modal-delete" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="font-serif text-xl font-bold text-slate-800 mb-2">Excluir Produto?</h3>
+            <p class="text-slate-500 mb-6">Esta ação não pode ser desfeita. Tem a certeza que deseja remover este item do cardápio?</p>
+            <div class="flex space-x-3">
+                <button onclick="fecharModalDelete()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg transition-colors">Cancelar</button>
+                <button onclick="excluirProdutoConfirmado()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de Produto -->
+    <div id="modal-edit" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-[60] hidden flex flex-col justify-end sm:justify-center sm:items-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="font-serif text-xl font-bold text-slate-800">Editar Produto</h3>
+                <button onclick="fecharModalEdit()" class="text-slate-400 hover:text-red-500 text-xl">&times;</button>
+            </div>
+            <form id="form-edit" onsubmit="salvarEdicaoProduto(event)">
+                <input type="hidden" id="edit-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nome do Produto</label>
+                    <input type="text" id="edit-nome" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Descrição / Ingredientes</label>
+                    <textarea id="edit-descricao" rows="2" class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b] resize-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Preço (R$)</label>
+                        <input type="number" id="edit-preco" step="0.01" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estoque</label>
+                        <input type="number" id="edit-estoque" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]">
+                    </div>
+                </div>
+                <button type="submit" id="btn-salvar-edit" class="w-full btn-primary font-bold py-3 rounded-lg transition-colors flex justify-center items-center">
+                    Salvar Alterações
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Visualização do QR Code -->
+    <div id="modal-qr" class="fixed inset-0 bg-slate-900 bg-opacity-70 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative">
+            <button onclick="fecharModalQR()" class="absolute top-4 right-4 text-slate-400 hover:text-red-500 text-2xl">&times;</button>
+            <h3 class="font-serif text-2xl font-bold text-[#991b1b] mb-1" id="qr-modal-title">Mesa --</h3>
+            <p class="text-xs text-slate-500 mb-6">Token: <span id="qr-modal-token" class="font-mono bg-slate-100 px-1 rounded"></span></p>
+            
+            <div class="inline-block p-4 border-2 border-dashed border-[#EAE3D8] rounded-xl bg-white mb-4">
+                <img id="qr-image" src="" alt="QR Code" class="mx-auto w-48 h-48">
+            </div>
+            
+            <p class="text-xs text-slate-500 mb-4 px-4 line-clamp-2 break-all" id="qr-modal-link"></p>
+            
+            <a id="qr-download" href="#" target="_blank" class="w-full inline-block btn-primary font-bold py-3 rounded-lg transition-colors shadow-md">
+                <i class="fas fa-external-link-alt mr-2"></i> Abrir Imagem (Salvar/Imprimir)
+            </a>
+        </div>
+    </div>
+
     <!-- Tela de Login -->
     <div id="login-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
@@ -96,8 +164,14 @@
                     <button onclick="mudarAba('historico')" id="tab-historico" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
                         <i class="fas fa-history mr-1"></i> Histórico
                     </button>
+                    <button onclick="mudarAba('saida')" id="tab-saida" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
+                        <i class="fas fa-cash-register mr-1"></i> Saída Manual
+                    </button>
                     <button onclick="mudarAba('produtos')" id="tab-produtos" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
                         <i class="fas fa-box-open mr-1"></i> Cadastro de Produtos
+                    </button>
+                    <button onclick="mudarAba('mesas')" id="tab-mesas" class="pb-3 px-2 tab-inactive tab-button whitespace-nowrap">
+                        <i class="fas fa-qrcode mr-1"></i> Mesas & QR
                     </button>
                 </div>
             </div>
@@ -130,6 +204,43 @@
                         <h2 class="font-serif text-2xl font-bold text-slate-800">Histórico de Pedidos</h2>
                         <span id="badge-historico" class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold">0 Retirados</span>
                     </div>
+
+                    <!-- NOVO: Relatório de Vendas -->
+                    <div id="relatorio-vendas" class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product mb-8 hidden">
+                        <h3 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2"><i class="fas fa-chart-pie text-[#991b1b] mr-2"></i>Relatório de Vendas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg shadow-sm">
+                                <p class="text-sm text-blue-700 font-bold uppercase mb-1">Total Vendido</p>
+                                <p id="stats-total-produtos" class="font-serif text-xl font-black text-blue-800">-</p>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg shadow-sm">
+                                <p class="text-sm text-green-700 font-bold uppercase mb-1">Mais Vendido</p>
+                                <p id="stats-mais-vendido" class="font-serif text-xl font-black text-green-800">-</p>
+                            </div>
+                            <div class="bg-red-50 border border-red-200 p-4 rounded-lg shadow-sm">
+                                <p class="text-sm text-red-700 font-bold uppercase mb-1">Menos Vendido</p>
+                                <p id="stats-menos-vendido" class="font-serif text-xl font-black text-red-800">-</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-600 uppercase mb-3">Ranking de Produtos</h4>
+                            <div class="overflow-x-auto max-h-60 overflow-y-auto rounded border border-slate-200">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead class="sticky top-0 bg-slate-100 shadow-sm">
+                                        <tr class="text-slate-700">
+                                            <th class="p-3 border-b font-bold">Produto</th>
+                                            <th class="p-3 border-b text-center w-32 font-bold">Qtd Vendida</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-ranking" class="divide-y divide-slate-100 bg-white">
+                                        <!-- Ranking vai aqui -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="font-serif text-xl font-bold text-slate-800 mb-4">Pedidos Finalizados</h3>
                     <div id="lista-historico" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Histórico renderizados via JS -->
                     </div>
@@ -151,9 +262,15 @@
                                     <label class="block text-sm font-medium text-slate-700 mb-1">Descrição / Ingredientes</label>
                                     <textarea id="prod-descricao" rows="2" class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b] resize-none" placeholder="Ex: Pão brioche, carne 200g, queijo cheddar..."></textarea>
                                 </div>
-                                <div class="mb-6">
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">Preço (R$)</label>
-                                    <input type="number" id="prod-preco" step="0.01" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: 25.50">
+                                <div class="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Preço (R$)</label>
+                                        <input type="number" id="prod-preco" step="0.01" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: 25.50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Estoque</label>
+                                        <input type="number" id="prod-estoque" min="0" required class="w-full p-2 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: 50" value="0">
+                                    </div>
                                 </div>
                                 <button type="submit" id="btn-salvar-prod" class="w-full btn-primary font-bold py-2 rounded transition-colors flex justify-center items-center">
                                     Cadastrar Produto
@@ -169,8 +286,9 @@
                                     <thead>
                                         <tr class="bg-slate-50 text-slate-600 text-sm">
                                             <th class="p-3 border-b">Nome</th>
+                                            <th class="p-3 border-b text-center w-24">Estoque</th>
                                             <th class="p-3 border-b w-32">Preço</th>
-                                            <th class="p-3 border-b w-16 text-center">Ações</th>
+                                            <th class="p-3 border-b w-24 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-produtos" class="text-sm divide-y divide-slate-100">
@@ -180,6 +298,70 @@
                             </div>
                         </div>
 
+                    </div>
+                </div>
+
+                <!-- ABA: MESAS & QR -->
+                <div id="view-mesas" class="hidden">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product mb-6">
+                        <h2 class="font-serif text-xl font-bold text-slate-800 mb-2">Configuração do Cardápio</h2>
+                        <p class="text-sm text-slate-500 mb-4">Insira o link base onde o arquivo <b>cliente.html</b> está hospedado. Isto será usado para gerar os QR Codes corretamente.</p>
+                        <div class="flex items-center space-x-3">
+                            <input type="url" id="base-url-cliente" class="flex-1 p-3 border border-slate-300 rounded-lg focus:outline-none focus:border-[#991b1b]" placeholder="Ex: https://seusite.com/cliente.html">
+                            <button onclick="salvarBaseUrl()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-6 rounded-lg transition-colors">Salvar Link</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Criar Nova Mesa -->
+                        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-fit card-product">
+                            <h2 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2">Nova Mesa</h2>
+                            <form id="form-mesa" onsubmit="salvarMesa(event)">
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Número / Nome da Mesa</label>
+                                    <input type="text" id="mesa-identificador" required class="w-full p-3 border border-slate-300 rounded focus:outline-none focus:border-[#991b1b]" placeholder="Ex: 5 ou Mesa Jardim">
+                                </div>
+                                <button type="submit" id="btn-salvar-mesa" class="w-full btn-primary font-bold py-3 rounded-lg transition-colors flex justify-center items-center">
+                                    <i class="fas fa-plus-circle mr-2"></i> Criar Mesa & Token
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Lista de Mesas -->
+                        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 card-product">
+                            <h2 class="font-serif text-xl font-bold text-slate-800 mb-4 border-b pb-2">Mesas Cadastradas</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-600 text-sm">
+                                            <th class="p-3 border-b">Identificador</th>
+                                            <th class="p-3 border-b">Token Autenticação</th>
+                                            <th class="p-3 border-b w-32 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-mesas" class="text-sm divide-y divide-slate-100">
+                                        <!-- Mesas renderizadas aqui -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: SAÍDA MANUAL -->
+                <div id="view-saida" class="hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <div>
+                            <h2 class="font-serif text-2xl font-bold text-slate-800">Saída Manual de Produtos</h2>
+                            <p class="text-sm text-slate-500 mt-1">Registe vendas de balcão rapidamente. Estes itens irão diretamente para o Histórico de Vendas.</p>
+                        </div>
+                        <button onclick="confirmarSaidaManual()" class="w-full sm:w-auto btn-primary font-bold py-3 px-6 rounded-xl shadow-md transition-colors flex justify-center items-center">
+                            <i class="fas fa-check-circle mr-2"></i> Confirmar Saída
+                        </button>
+                    </div>
+                    
+                    <div id="lista-saida-manual" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <!-- Produtos para saída renderizados via JS -->
                     </div>
                 </div>
 
@@ -209,10 +391,12 @@
         // Usar as coleções na raiz, ideais para o seu projeto
         const PATH_PRODUTOS = 'ProdutosSis';
         const PATH_PEDIDOS = 'PedidosSis';
+        const PATH_MESAS = 'MesasSis';
 
         let currentUser = null;
         let produtos = [];
         let pedidos = [];
+        let mesas = [];
 
         // Inicia a autenticação do Firebase em segundo plano imediatamente
         const iniciarSistema = async () => {
@@ -232,6 +416,7 @@
                 if (!document.getElementById('main-app').classList.contains('hidden')) {
                     escutarProdutos();
                     escutarPedidos();
+                    escutarMesas();
                 }
             }
         });
@@ -243,10 +428,15 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').classList.remove('hidden');
                 
+                // Carrega URL base salva, se existir
+                const savedUrl = localStorage.getItem('restaurante_base_url');
+                if(savedUrl) document.getElementById('base-url-cliente').value = savedUrl;
+                
                 // Se a autenticação já terminou em segundo plano, carrega os dados
                 if (currentUser) {
                     escutarProdutos();
                     escutarPedidos();
+                    escutarMesas();
                 }
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
@@ -260,7 +450,7 @@
 
         // Controle de Abas
         window.mudarAba = (aba) => {
-            const abas = ['pedidos', 'produtos', 'historico'];
+            const abas = ['pedidos', 'produtos', 'historico', 'saida', 'mesas'];
             abas.forEach(a => {
                 document.getElementById(`view-${a}`).classList.toggle('hidden', a !== aba);
                 const tab = document.getElementById(`tab-${a}`);
@@ -291,6 +481,7 @@
                     produtos.push({ id: doc.id, ...doc.data() });
                 });
                 renderizarTabelaProdutos();
+                renderizarSaidaManual();
             }, (error) => console.error("Erro produtos:", error));
         };
 
@@ -299,20 +490,27 @@
             tbody.innerHTML = '';
 
             if (produtos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Nenhum produto cadastrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Nenhum produto cadastrado.</td></tr>';
                 return;
             }
 
             produtos.forEach(prod => {
                 const tr = document.createElement('tr');
+                const estoque = prod.estoque !== undefined ? prod.estoque : 0;
+                const estoqueClass = estoque > 5 ? 'text-green-600' : (estoque > 0 ? 'text-orange-500' : 'text-red-500');
+                
                 tr.innerHTML = `
                     <td class="p-3">
                         <div class="font-medium text-slate-800">${prod.nome}</div>
                         ${prod.descricao ? `<div class="text-xs text-slate-500 mt-1 line-clamp-2">${prod.descricao}</div>` : ''}
                     </td>
+                    <td class="p-3 text-center align-top font-bold ${estoqueClass}">${estoque}</td>
                     <td class="p-3 text-orange-600 font-semibold align-top">${formatMoney(prod.preco)}</td>
-                    <td class="p-3 text-center align-top">
-                        <button onclick="excluirProduto('${prod.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Excluir">
+                    <td class="p-3 text-center align-top space-x-2">
+                        <button onclick="abrirModalEdit('${prod.id}')" class="text-blue-400 hover:text-blue-600 transition-colors" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="confirmarExclusaoModal('${prod.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Excluir">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
@@ -332,6 +530,7 @@
             const nome = document.getElementById('prod-nome').value.trim();
             const descricao = document.getElementById('prod-descricao').value.trim();
             const preco = parseFloat(document.getElementById('prod-preco').value);
+            const estoque = parseInt(document.getElementById('prod-estoque').value) || 0;
             const btn = document.getElementById('btn-salvar-prod');
 
             if (!nome || isNaN(preco)) return;
@@ -341,7 +540,7 @@
 
             try {
                 const ref = collection(db, PATH_PRODUTOS);
-                await addDoc(ref, { nome, descricao, preco });
+                await addDoc(ref, { nome, descricao, preco, estoque });
                 document.getElementById('form-produto').reset();
             } catch (error) {
                 console.error("Erro ao salvar produto:", error);
@@ -352,14 +551,185 @@
             }
         };
 
-        window.excluirProduto = async (id) => {
-            if (!currentUser || !confirm("Tem certeza que deseja excluir este produto?")) return;
+        // --- SISTEMA DE EDIÇÃO E EXCLUSÃO (MODAIS) ---
+        let produtoParaExcluir = null;
+
+        window.confirmarExclusaoModal = (id) => {
+            produtoParaExcluir = id;
+            document.getElementById('modal-delete').classList.remove('hidden');
+        };
+
+        window.fecharModalDelete = () => {
+            produtoParaExcluir = null;
+            document.getElementById('modal-delete').classList.add('hidden');
+        };
+
+        window.excluirProdutoConfirmado = async () => {
+            if (!currentUser || !produtoParaExcluir) return;
             try {
-                await deleteDoc(doc(db, PATH_PRODUTOS, id));
+                await deleteDoc(doc(db, PATH_PRODUTOS, produtoParaExcluir));
+                fecharModalDelete();
             } catch (error) {
                 console.error("Erro ao excluir:", error);
                 alert("Erro ao excluir produto.");
             }
+        };
+
+        window.abrirModalEdit = (id) => {
+            const prod = produtos.find(p => p.id === id);
+            if (!prod) return;
+            document.getElementById('edit-id').value = prod.id;
+            document.getElementById('edit-nome').value = prod.nome;
+            document.getElementById('edit-descricao').value = prod.descricao || '';
+            document.getElementById('edit-preco').value = prod.preco;
+            document.getElementById('edit-estoque').value = prod.estoque !== undefined ? prod.estoque : 0;
+            document.getElementById('modal-edit').classList.remove('hidden');
+        };
+
+        window.fecharModalEdit = () => {
+            document.getElementById('modal-edit').classList.add('hidden');
+        };
+
+        window.salvarEdicaoProduto = async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const id = document.getElementById('edit-id').value;
+            const nome = document.getElementById('edit-nome').value.trim();
+            const descricao = document.getElementById('edit-descricao').value.trim();
+            const preco = parseFloat(document.getElementById('edit-preco').value);
+            const estoque = parseInt(document.getElementById('edit-estoque').value) || 0;
+            const btn = document.getElementById('btn-salvar-edit');
+
+            if (!id || !nome || isNaN(preco)) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Atualizando...';
+
+            try {
+                const ref = doc(db, PATH_PRODUTOS, id);
+                await updateDoc(ref, { nome, descricao, preco, estoque });
+                fecharModalEdit();
+            } catch (error) {
+                console.error("Erro ao atualizar:", error);
+                alert("Erro ao atualizar o produto.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Salvar Alterações';
+            }
+        };
+
+        // --- GERENCIAMENTO DE MESAS E QR CODE ---
+
+        window.salvarBaseUrl = () => {
+            const url = document.getElementById('base-url-cliente').value.trim();
+            if (url) {
+                localStorage.setItem('restaurante_base_url', url);
+                alert("Link do cardápio salvo com sucesso no seu navegador!");
+            }
+        };
+
+        const escutarMesas = () => {
+            const ref = collection(db, PATH_MESAS);
+            onSnapshot(ref, (snapshot) => {
+                mesas = [];
+                snapshot.forEach(doc => {
+                    mesas.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarTabelaMesas();
+            }, (error) => console.error("Erro mesas:", error));
+        };
+
+        const renderizarTabelaMesas = () => {
+            const tbody = document.getElementById('tabela-mesas');
+            tbody.innerHTML = '';
+
+            if (mesas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Nenhuma mesa cadastrada.</td></tr>';
+                return;
+            }
+
+            mesas.sort((a, b) => a.identificador.localeCompare(b.identificador, undefined, {numeric: true})).forEach(mesa => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800 text-lg">Mesa ${mesa.identificador}</td>
+                    <td class="p-3 text-slate-500 font-mono text-xs"><i class="fas fa-key mr-1"></i>${mesa.token}</td>
+                    <td class="p-3 text-center space-x-3">
+                        <button onclick="abrirModalQR('${mesa.identificador}', '${mesa.token}')" class="text-blue-500 hover:text-blue-700 transition-colors" title="Gerar QR Code">
+                            <i class="fas fa-qrcode text-lg"></i>
+                        </button>
+                        <button onclick="excluirMesa('${mesa.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Excluir Mesa">
+                            <i class="fas fa-trash-alt text-lg"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.salvarMesa = async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const identificador = document.getElementById('mesa-identificador').value.trim();
+            const btn = document.getElementById('btn-salvar-mesa');
+
+            if (!identificador) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Criando...';
+
+            // Gera um token aleatório de 8 caracteres
+            const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 6);
+
+            try {
+                const ref = collection(db, PATH_MESAS);
+                await addDoc(ref, { identificador, token, dataCriacao: Date.now() });
+                document.getElementById('form-mesa').reset();
+            } catch (error) {
+                console.error("Erro ao salvar mesa:", error);
+                alert("Erro ao salvar mesa.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Criar Mesa & Token';
+            }
+        };
+
+        window.excluirMesa = async (id) => {
+            if (!currentUser || !confirm("Tem certeza que deseja excluir esta mesa e invalidar o seu QR Code?")) return;
+            try {
+                await deleteDoc(doc(db, PATH_MESAS, id));
+            } catch (error) {
+                console.error("Erro ao excluir mesa:", error);
+            }
+        };
+
+        window.abrirModalQR = (identificador, token) => {
+            let baseUrl = document.getElementById('base-url-cliente').value.trim();
+            if (!baseUrl) {
+                alert("Por favor, preencha e salve o link do seu cardápio (Base URL) primeiro!");
+                document.getElementById('base-url-cliente').focus();
+                return;
+            }
+
+            if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+            
+            // Link final contendo mesa e token
+            const urlFinal = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}mesa=${encodeURIComponent(identificador)}&token=${token}`;
+            
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlFinal)}&margin=10`;
+
+            document.getElementById('qr-modal-title').textContent = `MESA ${identificador}`;
+            document.getElementById('qr-modal-token').textContent = token;
+            document.getElementById('qr-modal-link').textContent = urlFinal;
+            document.getElementById('qr-image').src = qrApiUrl;
+            document.getElementById('qr-download').href = qrApiUrl;
+            
+            document.getElementById('modal-qr').classList.remove('hidden');
+        };
+
+        window.fecharModalQR = () => {
+            document.getElementById('modal-qr').classList.add('hidden');
         };
 
         // --- GERENCIAMENTO DE PEDIDOS ---
@@ -394,6 +764,60 @@
 
             document.getElementById('badge-pedidos').textContent = `${ativos.length} Ativo${ativos.length !== 1 ? 's' : ''}`;
             document.getElementById('badge-historico').textContent = `${retirados.length} Retirado${retirados.length !== 1 ? 's' : ''}`;
+
+            // --- LÓGICA DO RELATÓRIO DE VENDAS ---
+            const relatorioContainer = document.getElementById('relatorio-vendas');
+            const statsMais = document.getElementById('stats-mais-vendido');
+            const statsMenos = document.getElementById('stats-menos-vendido');
+            const statsTotal = document.getElementById('stats-total-produtos');
+            const tabelaRanking = document.getElementById('tabela-ranking');
+
+            if (retirados.length > 0) {
+                relatorioContainer.classList.remove('hidden');
+                
+                // Contar quantidade de cada produto vendido e total
+                const contagemItens = {};
+                let totalItensVendidos = 0;
+
+                retirados.forEach(pedido => {
+                    pedido.itens.forEach(item => {
+                        if (!contagemItens[item.nome]) {
+                            contagemItens[item.nome] = 0;
+                        }
+                        contagemItens[item.nome] += item.quantidade;
+                        totalItensVendidos += item.quantidade;
+                    });
+                });
+
+                // Converter objeto para array e ordenar do maior para o menor (decrescente)
+                const ranking = Object.keys(contagemItens).map(nome => ({
+                    nome: nome,
+                    quantidade: contagemItens[nome]
+                })).sort((a, b) => b.quantidade - a.quantidade);
+
+                // Atualizar UI de Mais, Menos e Total vendidos
+                statsTotal.innerHTML = `${totalItensVendidos} <span class="text-sm font-normal ml-1">itens</span>`;
+
+                if (ranking.length > 0) {
+                    statsMais.innerHTML = `${ranking[0].nome} <span class="text-sm font-normal ml-2">(${ranking[0].quantidade}x)</span>`;
+                    const ultimo = ranking[ranking.length - 1];
+                    statsMenos.innerHTML = `${ultimo.nome} <span class="text-sm font-normal ml-2">(${ultimo.quantidade}x)</span>`;
+                }
+
+                // Preencher tabela de ranking
+                tabelaRanking.innerHTML = '';
+                ranking.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-3 text-slate-800 font-medium">${item.nome}</td>
+                        <td class="p-3 text-center text-[#991b1b] font-bold text-lg">${item.quantidade}</td>
+                    `;
+                    tabelaRanking.appendChild(tr);
+                });
+            } else {
+                if (relatorioContainer) relatorioContainer.classList.add('hidden');
+            }
+            // ------------------------------------
 
             if (ativos.length === 0) {
                 lista.innerHTML = `
@@ -514,6 +938,129 @@
             } catch (error) {
                 console.error("Erro ao atualizar pedido:", error);
                 alert("Erro ao atualizar o status do pedido.");
+            }
+        };
+
+        // --- SAÍDA MANUAL ---
+        
+        const renderizarSaidaManual = () => {
+            const lista = document.getElementById('lista-saida-manual');
+            lista.innerHTML = '';
+
+            if (produtos.length === 0) {
+                lista.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500 font-medium border-2 border-dashed border-slate-200 rounded-xl">Nenhum produto cadastrado para dar saída.</div>';
+                return;
+            }
+
+            produtos.forEach(prod => {
+                const card = document.createElement('div');
+                const estoqueAtual = prod.estoque !== undefined ? prod.estoque : 0;
+                
+                // Desabilita se não tiver estoque
+                const semEstoque = estoqueAtual <= 0;
+                const opacityClass = semEstoque ? 'opacity-50 grayscale' : '';
+                
+                card.className = `bg-white p-4 rounded-xl shadow-sm border border-slate-100 card-product flex flex-col justify-between h-full ${opacityClass}`;
+                card.innerHTML = `
+                    <div class="mb-4 text-center relative">
+                        ${semEstoque ? '<span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">ESGOTADO</span>' : ''}
+                        <h3 class="font-serif font-bold text-slate-800 text-sm md:text-base leading-tight mb-1">${prod.nome}</h3>
+                        <p class="text-[#991b1b] font-bold text-sm">${formatMoney(prod.preco)}</p>
+                        <p class="text-xs text-slate-500 mt-1">Estoque: <span class="font-bold ${estoqueAtual > 0 ? 'text-green-600' : 'text-red-500'}">${estoqueAtual}</span></p>
+                    </div>
+                    <div class="flex justify-between items-center bg-[#FDFBF5] p-2 rounded-full border border-[#EAE3D8] quantity-control w-full max-w-[140px] mx-auto">
+                        <button onclick="alterarQtdSaida('${prod.id}', -1, ${estoqueAtual})" class="text-[#991b1b] hover:bg-[#EAE3D8] transition-colors shadow-sm flex items-center justify-center ${semEstoque ? 'pointer-events-none' : ''}"><i class="fas fa-minus text-xs"></i></button>
+                        <input type="number" id="qtd-saida-${prod.id}" value="0" min="0" readonly class="bg-transparent w-10 text-center font-bold text-slate-800 outline-none text-lg">
+                        <button onclick="alterarQtdSaida('${prod.id}', 1, ${estoqueAtual})" class="text-[#991b1b] hover:bg-[#EAE3D8] transition-colors shadow-sm flex items-center justify-center ${semEstoque ? 'pointer-events-none' : ''}"><i class="fas fa-plus text-xs"></i></button>
+                    </div>
+                `;
+                lista.appendChild(card);
+            });
+        };
+
+        window.alterarQtdSaida = (id, delta, maxEstoque) => {
+            const input = document.getElementById(`qtd-saida-${id}`);
+            if (input) {
+                let val = parseInt(input.value) || 0;
+                val += delta;
+                if (val < 0) val = 0;
+                if (val > maxEstoque) {
+                    alert(`Estoque insuficiente! Só restam ${maxEstoque} unidades.`);
+                    val = maxEstoque;
+                }
+                input.value = val;
+            }
+        };
+
+        window.confirmarSaidaManual = async () => {
+            if (!currentUser) return;
+
+            const itensSaida = [];
+            let totalSaida = 0;
+
+            produtos.forEach(prod => {
+                const input = document.getElementById(`qtd-saida-${prod.id}`);
+                if (input) {
+                    const qtd = parseInt(input.value) || 0;
+                    if (qtd > 0) {
+                        itensSaida.push({
+                            idProduto: prod.id,
+                            nome: prod.nome,
+                            preco: prod.preco,
+                            quantidade: qtd
+                        });
+                        totalSaida += prod.preco * qtd;
+                    }
+                }
+            });
+
+            if (itensSaida.length === 0) {
+                alert("Por favor, adicione quantidades aos produtos para dar saída.");
+                return;
+            }
+
+            const novoPedido = {
+                cliente: 'Saída Manual (Balcão)',
+                itens: itensSaida,
+                total: totalSaida,
+                status: 'retirado', // Vai direto para o histórico/estatísticas
+                timestamp: Date.now() 
+            };
+
+            try {
+                const btn = document.querySelector('#view-saida button.btn-primary');
+                const htmlOriginal = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> A processar...';
+                btn.disabled = true;
+
+                const ref = collection(db, PATH_PEDIDOS);
+                await addDoc(ref, novoPedido);
+                
+                // Atualizar o estoque no banco de dados para cada item
+                for (const item of itensSaida) {
+                    const prodRef = doc(db, PATH_PRODUTOS, item.idProduto);
+                    const prodAtual = produtos.find(p => p.id === item.idProduto);
+                    if (prodAtual) {
+                        const novoEstoque = Math.max(0, (prodAtual.estoque || 0) - item.quantidade);
+                        await updateDoc(prodRef, { estoque: novoEstoque });
+                    }
+                }
+
+                // Limpar quantidades
+                produtos.forEach(prod => {
+                    const input = document.getElementById(`qtd-saida-${prod.id}`);
+                    if (input) input.value = 0;
+                });
+
+                btn.innerHTML = htmlOriginal;
+                btn.disabled = false;
+                
+                alert("Venda manual registada com sucesso!");
+                mudarAba('historico'); // Mostra o relatório atualizado logo a seguir
+
+            } catch (error) {
+                console.error("Erro ao registrar saída manual:", error);
+                alert("Erro ao registrar a saída. Tente novamente.");
             }
         };
 
