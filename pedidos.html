@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fazer Pedido - Restaurante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #FDFBF5; color: #3d3d3d; }
+        .font-serif { font-family: 'Cinzel', serif; }
+        .smooth-transition { transition: all 0.3s ease; }
+        .card-product { border: 1px solid #EAE3D8; transition: box-shadow 0.3s ease-in-out; }
+        .btn-primary { background-color: #991b1b; color: white; }
+        .btn-primary:hover { background-color: #7f1d1d; }
+        .btn-whatsapp { background-color: #25D366; }
+        .btn-whatsapp:hover { background-color: #1ea952; }
+        .home-header {
+            background-image: url('https://www.transparenttextures.com/patterns/concrete-wall-2.png');
+            background-color: #f9f6f0;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Tela Inicial: Escolher Nome -->
+    <div id="nome-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6" style="background-color: #FDFBF5;">
+        <div class="text-center mb-8">
+            <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo do Restaurante" class="w-32 h-32 mx-auto mb-4 rounded-full object-cover shadow-md border-2 border-[#EAE3D8]">
+            <h1 class="font-serif text-3xl font-bold text-slate-800">Bem-vindo!</h1>
+            <p class="text-slate-500 mt-2 font-medium">Por favor, informe o seu nome para começar.</p>
+        </div>
+        <div class="w-full max-w-sm">
+            <input type="text" id="nome-input" placeholder="O seu nome" class="w-full text-center text-2xl p-4 border-2 border-[#EAE3D8] rounded-xl focus:outline-none focus:border-[#991b1b] mb-4 shadow-sm bg-white text-slate-800 font-medium">
+            <button onclick="entrarNome()" class="w-full btn-primary font-bold py-4 rounded-xl text-lg shadow-lg smooth-transition">
+                Ver Cardápio
+            </button>
+        </div>
+    </div>
+
+    <!-- Header do Cardápio -->
+    <header class="bg-white shadow-sm sticky top-0 z-40 home-header border-b border-[#EAE3D8]">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo" class="w-10 h-10 rounded-full object-cover shadow-sm border border-[#EAE3D8]">
+                <div>
+                    <h2 class="font-serif text-xl font-bold text-slate-800">Cardápio</h2>
+                    <span id="display-nome" class="text-sm font-bold text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-2 py-1 rounded-md">Cliente --</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="btn-historico" onclick="abrirModalHistorico()" class="hidden text-sm text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-3 py-1.5 rounded-md font-bold shadow-sm smooth-transition hover:bg-[#EAE3D8]"><i class="fas fa-list-ul mr-1"></i> Pedidos</button>
+                <button id="btn-alterar-nome" onclick="trocarNome()" class="text-sm text-slate-500 hover:text-[#991b1b] underline font-medium smooth-transition">Alterar Nome</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Lista de Produtos -->
+    <main class="max-w-3xl mx-auto px-4 py-6">
+        <div id="loading" class="text-center py-10 text-slate-500">
+            <i class="fas fa-spinner fa-spin text-3xl mb-2 text-[#991b1b]"></i>
+            <p class="font-medium">A carregar cardápio...</p>
+        </div>
+        <div id="produtos-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+            <!-- Produtos renderizados via JS -->
+        </div>
+    </main>
+
+    <!-- Carrinho Flutuante -->
+    <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-[#EAE3D8] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 transform translate-y-full smooth-transition z-40">
+        <div class="max-w-3xl mx-auto flex justify-between items-center">
+            <div>
+                <span class="block text-sm text-slate-500 font-medium">Total do Pedido</span>
+                <span id="cart-total" class="font-serif text-2xl font-bold text-slate-800">R$ 0,00</span>
+                <span id="cart-count" class="text-sm font-bold text-[#991b1b] ml-2">0 itens</span>
+            </div>
+            <button onclick="abrirModalPedido()" class="btn-whatsapp text-white font-bold py-3 px-6 rounded-xl shadow-md smooth-transition flex items-center">
+                <i class="fas fa-shopping-bag mr-2"></i> Finalizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Resumo do Pedido -->
+    <div id="modal-pedido" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center">
+        <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 transform transition-transform shadow-2xl overflow-y-auto max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4 border-b border-[#EAE3D8] pb-3">
+                <h3 class="font-serif text-xl font-bold text-slate-800">Resumo do Pedido</h3>
+                <button onclick="fecharModalPedido()" class="text-slate-400 hover:text-[#991b1b] text-2xl smooth-transition">&times;</button>
+            </div>
+            <div id="modal-itens" class="space-y-3 mb-6 divide-y divide-[#EAE3D8]">
+                <!-- Itens do carrinho aqui -->
+            </div>
+            <div class="border-t border-[#EAE3D8] pt-4 mb-6 flex justify-between items-center bg-[#FDFBF5] p-4 rounded-lg">
+                <span class="font-bold text-slate-600 uppercase text-sm tracking-wider">Total a Pagar:</span>
+                <span id="modal-total" class="font-serif text-2xl font-bold text-[#991b1b]">R$ 0,00</span>
+            </div>
+            <button id="btn-confirmar-pedido" onclick="enviarPedido()" class="w-full btn-whatsapp text-white font-bold py-4 rounded-xl text-lg shadow-lg smooth-transition flex justify-center items-center">
+                <i class="fas fa-check-circle mr-2"></i> Confirmar Pedido
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico de Pedidos da Mesa -->
+    <div id="modal-historico" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center">
+        <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 transform transition-transform shadow-2xl overflow-y-auto max-h-[85vh]">
+            <div class="flex justify-between items-center mb-4 border-b border-[#EAE3D8] pb-3">
+                <h3 class="font-serif text-xl font-bold text-slate-800"><i class="fas fa-receipt text-[#991b1b] mr-2"></i>Meus Pedidos</h3>
+                <button onclick="fecharModalHistorico()" class="text-slate-400 hover:text-[#991b1b] text-2xl smooth-transition">&times;</button>
+            </div>
+            <div id="historico-list" class="space-y-4">
+                <!-- Histórico de pedidos renderizado via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificação -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white font-medium px-6 py-3 rounded-full shadow-lg opacity-0 transition-opacity duration-300 z-50 pointer-events-none flex items-center border border-slate-700">
+        <i class="fas fa-info-circle mr-2 text-[#EAE3D8]"></i>
+        <span id="toast-msg">Mensagem aqui</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
+            authDomain: "dreiherzen-c7640.firebaseapp.com",
+            projectId: "dreiherzen-c7640",
+            storageBucket: "dreiherzen-c7640.firebasestorage.app",
+            messagingSenderId: "324520974615",
+            appId: "1:324520974615:web:51e4abd4d45add5d9eff52",
+            measurementId: "G-LVDE2470BP"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        const PATH_PRODUTOS = 'ProdutosSis';
+        const PATH_PEDIDOS = 'PedidosSis';
+
+        let currentUser = null;
+        let produtos = [];
+        let carrinho = [];
+        let nomeCliente = null;
+        let tokenAutenticacao = null;
+        let pedidosMesa = [];
+
+        const produtosListEl = document.getElementById('produtos-list');
+        const loadingEl = document.getElementById('loading');
+        const cartBarEl = document.getElementById('cart-bar');
+        const cartTotalEl = document.getElementById('cart-total');
+        const cartCountEl = document.getElementById('cart-count');
+        const toastEl = document.getElementById('toast');
+        const toastMsgEl = document.getElementById('toast-msg');
+
+        const init = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Erro na autenticação:", error);
+                showToast("Erro ao conectar ao sistema.");
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                carregarProdutos();
+                if (tokenAutenticacao) {
+                    escutarPedidosMesa();
+                }
+            }
+        });
+
+        // Verifica se o link já veio com a mesa e o token informados no QR Code
+        const urlParams = new URLSearchParams(window.location.search);
+        const mesaUrl = urlParams.get('mesa');
+        const tokenUrl = urlParams.get('token');
+        const nomeUrl = urlParams.get('nome'); // Compatibilidade antiga
+
+        if (mesaUrl) {
+            nomeCliente = `Mesa ${mesaUrl}`;
+            tokenAutenticacao = tokenUrl;
+            document.getElementById('nome-screen').style.display = 'none';
+            document.getElementById('display-nome').textContent = nomeCliente;
+            
+            // Ocultar o botão "Alterar Nome" e mostrar "Pedidos"
+            document.getElementById('btn-alterar-nome').style.display = 'none';
+            document.getElementById('btn-historico').classList.remove('hidden');
+        } else if (nomeUrl) {
+            nomeCliente = nomeUrl;
+            document.getElementById('nome-screen').style.display = 'none';
+            document.getElementById('display-nome').textContent = nomeCliente;
+        }
+
+        window.entrarNome = () => {
+            const input = document.getElementById('nome-input').value.trim();
+            if (!input) {
+                showToast("Por favor, informe o seu nome.");
+                return;
+            }
+            nomeCliente = input;
+            document.getElementById('display-nome').textContent = nomeCliente;
+            document.getElementById('nome-screen').style.display = 'none';
+        };
+
+        window.trocarNome = () => {
+            document.getElementById('nome-screen').style.display = 'flex';
+            document.getElementById('nome-input').value = '';
+            carrinho = [];
+            atualizarCarrinho();
+        };
+
+        const showToast = (msg) => {
+            toastMsgEl.textContent = msg;
+            toastEl.style.opacity = '1';
+            setTimeout(() => { toastEl.style.opacity = '0'; }, 3000);
+        };
+
+        const formatMoney = (value) => {
+            return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const carregarProdutos = () => {
+            if (!currentUser) return;
+            const ref = collection(db, PATH_PRODUTOS);
+            
+            onSnapshot(ref, (snapshot) => {
+                produtos = [];
+                snapshot.forEach(doc => {
+                    produtos.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarProdutos();
+            }, (error) => {
+                console.error("Erro ao buscar produtos:", error);
+                loadingEl.innerHTML = "<p class='text-red-500 font-bold'>Erro ao carregar cardápio.</p>";
+            });
+        };
+
+        const renderizarProdutos = () => {
+            loadingEl.style.display = 'none';
+            produtosListEl.classList.remove('hidden');
+            produtosListEl.innerHTML = '';
+
+            if (produtos.length === 0) {
+                produtosListEl.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 font-medium">Nenhum produto disponível no momento.</p>';
+                return;
+            }
+
+            produtos.forEach(prod => {
+                const div = document.createElement('div');
+                const estoqueAtual = prod.estoque !== undefined ? prod.estoque : 0;
+                const semEstoque = estoqueAtual <= 0;
+                
+                const opacityClass = semEstoque ? 'opacity-60 grayscale' : '';
+                
+                div.className = `bg-white p-5 rounded-xl shadow-sm card-product flex justify-between items-center ${opacityClass}`;
+                div.innerHTML = `
+                    <div class="flex-1 pr-4 relative">
+                        ${semEstoque ? '<span class="inline-block mb-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Esgotado</span>' : ''}
+                        <h3 class="font-serif font-bold text-slate-800 text-lg leading-tight mb-1">${prod.nome}</h3>
+                        ${prod.descricao ? `<p class="text-xs text-slate-500 mb-3 leading-snug line-clamp-2">${prod.descricao}</p>` : ''}
+                        <p class="text-[#991b1b] font-bold text-lg">${formatMoney(prod.preco)}</p>
+                    </div>
+                    <button onclick="adicionarAoCarrinho('${prod.id}')" class="bg-[#FDFBF5] hover:bg-[#EAE3D8] text-[#991b1b] border border-[#EAE3D8] w-12 h-12 rounded-full flex justify-center items-center smooth-transition shrink-0 shadow-sm ${semEstoque ? 'pointer-events-none' : ''}" ${semEstoque ? 'disabled' : ''}>
+                        <i class="fas fa-plus text-lg"></i>
+                    </button>
+                `;
+                produtosListEl.appendChild(div);
+            });
+        };
+
+        window.adicionarAoCarrinho = (idProduto) => {
+            const produto = produtos.find(p => p.id === idProduto);
+            if (!produto) return;
+
+            const estoqueMaximo = produto.estoque !== undefined ? produto.estoque : 0;
+            
+            if (estoqueMaximo <= 0) {
+                showToast("Produto esgotado!");
+                return;
+            }
+
+            const itemExistente = carrinho.find(item => item.produto.id === idProduto);
+            if (itemExistente) {
+                if (itemExistente.quantidade + 1 > estoqueMaximo) {
+                    showToast(`Apenas ${estoqueMaximo} unidades disponíveis!`);
+                    return;
+                }
+                itemExistente.quantidade += 1;
+            } else {
+                carrinho.push({ produto: produto, quantidade: 1 });
+            }
+            
+            showToast(`${produto.nome} adicionado!`);
+            atualizarCarrinho();
+        };
+
+        window.removerDoCarrinho = (idProduto) => {
+            const index = carrinho.findIndex(item => item.produto.id === idProduto);
+            if (index !== -1) {
+                if (carrinho[index].quantidade > 1) {
+                    carrinho[index].quantidade -= 1;
+                } else {
+                    carrinho.splice(index, 1);
+                }
+            }
+            atualizarCarrinho();
+            renderizarModalPedido(); 
+        };
+
+        const atualizarCarrinho = () => {
+            const total = carrinho.reduce((acc, item) => acc + (item.produto.preco * item.quantidade), 0);
+            const qtd = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
+
+            cartTotalEl.textContent = formatMoney(total);
+            cartCountEl.textContent = `${qtd} item${qtd !== 1 ? 's' : ''}`;
+
+            if (qtd > 0) {
+                cartBarEl.classList.remove('translate-y-full');
+            } else {
+                cartBarEl.classList.add('translate-y-full');
+                fecharModalPedido();
+            }
+        };
+
+        window.abrirModalPedido = () => {
+            if (carrinho.length === 0) return;
+            renderizarModalPedido();
+            document.getElementById('modal-pedido').classList.remove('hidden');
+        };
+
+        window.fecharModalPedido = () => {
+            document.getElementById('modal-pedido').classList.add('hidden');
+        };
+
+        const renderizarModalPedido = () => {
+            const modalItens = document.getElementById('modal-itens');
+            modalItens.innerHTML = '';
+            
+            let total = 0;
+
+            carrinho.forEach(item => {
+                total += item.produto.preco * item.quantidade;
+                const div = document.createElement('div');
+                div.className = 'py-3 flex justify-between items-center';
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <span class="font-bold text-slate-800">${item.produto.nome}</span>
+                        <div class="text-sm text-slate-500 font-medium mt-1">
+                            ${formatMoney(item.produto.preco)} <span class="mx-1">x</span> <span class="text-[#991b1b] font-bold">${item.quantidade}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="font-bold text-slate-800">${formatMoney(item.produto.preco * item.quantidade)}</span>
+                        <button onclick="removerDoCarrinho('${item.produto.id}')" class="text-slate-300 hover:text-red-500 p-2 smooth-transition bg-slate-50 rounded-full h-8 w-8 flex items-center justify-center">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                modalItens.appendChild(div);
+            });
+
+            document.getElementById('modal-total').textContent = formatMoney(total);
+        };
+
+        // --- SISTEMA DE HISTÓRICO DA MESA ---
+
+        window.abrirModalHistorico = () => {
+            document.getElementById('modal-historico').classList.remove('hidden');
+        };
+
+        window.fecharModalHistorico = () => {
+            document.getElementById('modal-historico').classList.add('hidden');
+        };
+
+        const escutarPedidosMesa = () => {
+            if (!currentUser || !tokenAutenticacao) return;
+            const ref = collection(db, PATH_PEDIDOS);
+            
+            onSnapshot(ref, (snapshot) => {
+                pedidosMesa = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Filtra na memória para exibir apenas os pedidos com o token da sessão atual
+                    if (data.tokenAutenticacao === tokenAutenticacao) {
+                        pedidosMesa.push({ id: doc.id, ...data });
+                    }
+                });
+                
+                // Ordena do mais recente para o mais antigo
+                pedidosMesa.sort((a, b) => b.timestamp - a.timestamp);
+                renderizarHistorico();
+            }, (error) => console.error("Erro ao buscar histórico:", error));
+        };
+
+        const renderizarHistorico = () => {
+            const lista = document.getElementById('historico-list');
+            lista.innerHTML = '';
+
+            if (pedidosMesa.length === 0) {
+                lista.innerHTML = '<p class="text-center text-slate-500 py-8 font-medium">Nenhum pedido realizado ainda.</p>';
+                return;
+            }
+
+            pedidosMesa.forEach(pedido => {
+                let statusHtml = '';
+                if (pedido.status === 'pendente') {
+                    statusHtml = '<span class="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Na Cozinha</span>';
+                } else if (pedido.status === 'pronto') {
+                    statusHtml = '<span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Pronto p/ Retirar</span>';
+                } else {
+                    statusHtml = '<span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Retirado</span>';
+                }
+
+                const itensHtml = pedido.itens.map(item => `
+                    <div class="flex justify-between text-sm text-slate-600 mb-1 last:mb-0">
+                        <span class="truncate pr-2"><b class="text-[#991b1b]">${item.quantidade}x</b> ${item.nome}</span>
+                        <span class="font-medium">${formatMoney(item.preco * item.quantidade)}</span>
+                    </div>
+                `).join('');
+
+                lista.innerHTML += `
+                    <div class="border border-[#EAE3D8] rounded-xl p-4 bg-[#FDFBF5] shadow-sm">
+                        <div class="flex justify-between items-center mb-3 pb-3 border-b border-[#EAE3D8]">
+                            <span class="text-xs text-slate-500 font-medium"><i class="far fa-clock mr-1"></i>${new Date(pedido.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
+                            ${statusHtml}
+                        </div>
+                        <div class="mb-3">
+                            ${itensHtml}
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-[#EAE3D8]">
+                            <span class="font-bold text-slate-600 text-sm uppercase">Total:</span>
+                            <span class="font-serif font-bold text-lg text-[#991b1b]">${formatMoney(pedido.total)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        window.enviarPedido = async () => {
+            if (!currentUser || carrinho.length === 0 || !nomeCliente) return;
+
+            const btn = document.getElementById('btn-confirmar-pedido');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> A enviar...';
+
+            const total = carrinho.reduce((acc, item) => acc + (item.produto.preco * item.quantidade), 0);
+            
+            const itensPedido = carrinho.map(item => ({
+                idProduto: item.produto.id,
+                nome: item.produto.nome,
+                preco: item.produto.preco,
+                quantidade: item.quantidade
+            }));
+
+            const novoPedido = {
+                cliente: nomeCliente,
+                tokenAutenticacao: tokenAutenticacao, // Guarda a prova de que usou o QR Code
+                itens: itensPedido,
+                total: total,
+                status: 'pendente',
+                timestamp: Date.now() 
+            };
+
+            try {
+                const ref = collection(db, PATH_PEDIDOS);
+                await addDoc(ref, novoPedido);
+                
+                // Atualizar o estoque no banco de dados para cada item
+                for (const item of itensPedido) {
+                    const prodRef = doc(db, PATH_PRODUTOS, item.idProduto);
+                    const prodAtual = produtos.find(p => p.id === item.idProduto);
+                    if (prodAtual) {
+                        const novoEstoque = Math.max(0, (prodAtual.estoque || 0) - item.quantidade);
+                        await updateDoc(prodRef, { estoque: novoEstoque });
+                    }
+                }
+                
+                showToast("Pedido enviado para a cozinha!");
+                carrinho = [];
+                atualizarCarrinho();
+                fecharModalPedido();
+                
+                document.getElementById('nome-screen').style.display = 'flex';
+                document.getElementById('nome-screen').innerHTML = `
+                    <div class="text-center w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-[#EAE3D8]">
+                        <div class="w-24 h-24 bg-green-50 text-[#25D366] rounded-full flex items-center justify-center mx-auto mb-6 text-5xl border-4 border-green-100">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h2 class="font-serif text-2xl font-bold text-slate-800 mb-3">Pedido Recebido!</h2>
+                        <p class="text-slate-500 mb-6 font-medium">A cozinha já está a preparar o seu pedido, <br><b class="text-slate-800 text-lg">${nomeCliente}</b>.</p>
+                        
+                        <div class="bg-[#FDFBF5] border border-[#EAE3D8] rounded-xl p-4 mb-8 text-[#991b1b] font-medium text-sm flex items-center shadow-sm">
+                            <i class="fas fa-clock text-2xl mr-3 opacity-80"></i>
+                            <span class="text-left leading-tight">Por favor, retire o seu pedido no balcão em <b>5 minutos</b>.</span>
+                        </div>
+
+                        <div class="flex flex-col space-y-3">
+                            <button onclick="location.reload()" class="w-full btn-primary font-bold py-3 rounded-xl shadow-md transition-colors">Fazer Novo Pedido</button>
+                            ${tokenAutenticacao ? `<button onclick="document.getElementById('nome-screen').style.display='none'; abrirModalHistorico();" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl shadow-sm transition-colors">Acompanhar Pedido</button>` : ''}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Erro ao enviar pedido:", error);
+                showToast("Erro ao enviar pedido. Tente novamente.");
+            } finally {
+                if (document.body.contains(btn)) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Confirmar Pedido';
+                }
+            }
+        };
+
+        init();
+
+    </script>
+</body>
+</html>
