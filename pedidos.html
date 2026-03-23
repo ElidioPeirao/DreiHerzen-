@@ -20,38 +20,49 @@
             background-image: url('https://www.transparenttextures.com/patterns/concrete-wall-2.png');
             background-color: #f9f6f0;
         }
+        /* Ocultar barra de rolagem na lista de categorias para ficar elegante */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="pb-24">
 
-    <!-- Tela Inicial: Escolher Nome -->
+    <!-- Tela Inicial: Bloqueio de Acesso -->
     <div id="nome-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6" style="background-color: #FDFBF5;">
-        <div class="text-center mb-8">
-            <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo do Restaurante" class="w-32 h-32 mx-auto mb-4 rounded-full object-cover shadow-md border-2 border-[#EAE3D8]">
-            <h1 class="font-serif text-3xl font-bold text-slate-800">Bem-vindo!</h1>
-            <p class="text-slate-500 mt-2 font-medium">Por favor, informe o seu nome para começar.</p>
-        </div>
-        <div class="w-full max-w-sm">
-            <input type="text" id="nome-input" placeholder="O seu nome" class="w-full text-center text-2xl p-4 border-2 border-[#EAE3D8] rounded-xl focus:outline-none focus:border-[#991b1b] mb-4 shadow-sm bg-white text-slate-800 font-medium">
-            <button onclick="entrarNome()" class="w-full btn-primary font-bold py-4 rounded-xl text-lg shadow-lg smooth-transition">
-                Ver Cardápio
-            </button>
+        <div class="text-center mb-8 bg-white p-8 rounded-2xl shadow-xl border border-[#EAE3D8] max-w-sm w-full">
+            <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo do Restaurante" class="w-32 h-32 mx-auto mb-6 rounded-full object-cover shadow-md border-2 border-[#EAE3D8]">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h1 class="font-serif text-2xl font-bold text-slate-800 mb-2">Acesso Restrito</h1>
+            <p class="text-slate-500 font-medium text-sm leading-relaxed">
+                Para visualizar o cardápio e fazer o seu pedido, por favor utilize a câmera do seu celular para <b>escanear o QR Code</b> presente na sua mesa.
+            </p>
         </div>
     </div>
 
     <!-- Header do Cardápio -->
-    <header class="bg-white shadow-sm sticky top-0 z-40 home-header border-b border-[#EAE3D8]">
-        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+    <header class="bg-white shadow-sm sticky top-0 z-40 home-header border-b border-[#EAE3D8] flex flex-col">
+        <div class="max-w-3xl mx-auto w-full px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <img src="https://i.imgur.com/1BD4WZD.png" alt="Logo" class="w-10 h-10 rounded-full object-cover shadow-sm border border-[#EAE3D8]">
                 <div>
                     <h2 class="font-serif text-xl font-bold text-slate-800">Cardápio</h2>
-                    <span id="display-nome" class="text-sm font-bold text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-2 py-1 rounded-md">Cliente --</span>
+                    <span id="display-nome" class="text-sm font-bold text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-2 py-1 rounded-md">Mesa --</span>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <button id="btn-historico" onclick="abrirModalHistorico()" class="hidden text-sm text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-3 py-1.5 rounded-md font-bold shadow-sm smooth-transition hover:bg-[#EAE3D8]"><i class="fas fa-list-ul mr-1"></i> Pedidos</button>
-                <button id="btn-alterar-nome" onclick="trocarNome()" class="text-sm text-slate-500 hover:text-[#991b1b] underline font-medium smooth-transition">Alterar Nome</button>
+            <div class="flex items-center space-x-2">
+                <button id="btn-historico" onclick="abrirModalHistorico()" class="hidden text-sm text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-3 py-2 rounded-md font-bold shadow-sm smooth-transition hover:bg-[#EAE3D8]"><i class="fas fa-list-ul mr-1"></i> Pedidos</button>
+                <button id="btn-carrinho-header" onclick="abrirModalPedido()" class="hidden text-sm text-white bg-[#991b1b] border border-[#991b1b] px-3 py-2 rounded-md font-bold shadow-sm smooth-transition hover:bg-[#7f1d1d]">
+                    <i class="fas fa-shopping-cart mr-1"></i> <span id="header-cart-count">0</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- NOVO: Barra de Navegação de Categorias -->
+        <div id="categorias-bar-container" class="max-w-3xl mx-auto w-full px-4 pb-3 hidden">
+            <div id="categorias-bar" class="flex space-x-3 overflow-x-auto hide-scrollbar pb-1">
+                <!-- Botões de categorias renderizados via JS -->
             </div>
         </div>
     </header>
@@ -67,7 +78,7 @@
         </div>
     </main>
 
-    <!-- Carrinho Flutuante -->
+    <!-- Carrinho Flutuante (Oculto se usar pelo topo, mas útil no scroll) -->
     <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-[#EAE3D8] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 transform translate-y-full smooth-transition z-40">
         <div class="max-w-3xl mx-auto flex justify-between items-center">
             <div>
@@ -85,10 +96,10 @@
     <div id="modal-pedido" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center">
         <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 transform transition-transform shadow-2xl overflow-y-auto max-h-[80vh]">
             <div class="flex justify-between items-center mb-4 border-b border-[#EAE3D8] pb-3">
-                <h3 class="font-serif text-xl font-bold text-slate-800">Resumo do Pedido</h3>
+                <h3 class="font-serif text-xl font-bold text-slate-800"><i class="fas fa-shopping-cart text-[#991b1b] mr-2"></i>Seu Carrinho</h3>
                 <button onclick="fecharModalPedido()" class="text-slate-400 hover:text-[#991b1b] text-2xl smooth-transition">&times;</button>
             </div>
-            <div id="modal-itens" class="space-y-3 mb-6 divide-y divide-[#EAE3D8]">
+            <div id="modal-itens" class="space-y-4 mb-6 divide-y divide-[#EAE3D8]">
                 <!-- Itens do carrinho aqui -->
             </div>
             <div class="border-t border-[#EAE3D8] pt-4 mb-6 flex justify-between items-center bg-[#FDFBF5] p-4 rounded-lg">
@@ -148,12 +159,14 @@
         let nomeCliente = null;
         let tokenAutenticacao = null;
         let pedidosMesa = [];
+        let categoriaAtiva = 'Todas'; // Nova variável para rastrear a aba de categoria atual
 
         const produtosListEl = document.getElementById('produtos-list');
         const loadingEl = document.getElementById('loading');
         const cartBarEl = document.getElementById('cart-bar');
         const cartTotalEl = document.getElementById('cart-total');
         const cartCountEl = document.getElementById('cart-count');
+        const headerCartCountEl = document.getElementById('header-cart-count');
         const toastEl = document.getElementById('toast');
         const toastMsgEl = document.getElementById('toast-msg');
 
@@ -166,54 +179,32 @@
             }
         };
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                carregarProdutos();
-                if (tokenAutenticacao) {
-                    escutarPedidosMesa();
-                }
-            }
-        });
-
         // Verifica se o link já veio com a mesa e o token informados no QR Code
         const urlParams = new URLSearchParams(window.location.search);
         const mesaUrl = urlParams.get('mesa');
         const tokenUrl = urlParams.get('token');
-        const nomeUrl = urlParams.get('nome'); // Compatibilidade antiga
 
-        if (mesaUrl) {
+        if (mesaUrl && tokenUrl) {
             nomeCliente = `Mesa ${mesaUrl}`;
             tokenAutenticacao = tokenUrl;
             document.getElementById('nome-screen').style.display = 'none';
             document.getElementById('display-nome').textContent = nomeCliente;
             
-            // Ocultar o botão "Alterar Nome" e mostrar "Pedidos"
-            document.getElementById('btn-alterar-nome').style.display = 'none';
             document.getElementById('btn-historico').classList.remove('hidden');
-        } else if (nomeUrl) {
-            nomeCliente = nomeUrl;
-            document.getElementById('nome-screen').style.display = 'none';
-            document.getElementById('display-nome').textContent = nomeCliente;
-        }
+            document.getElementById('btn-carrinho-header').classList.remove('hidden');
+        } 
+        // Se NÃO tiver os parâmetros, o ecrã de "Acesso Restrito" mantém-se visível.
 
-        window.entrarNome = () => {
-            const input = document.getElementById('nome-input').value.trim();
-            if (!input) {
-                showToast("Por favor, informe o seu nome.");
-                return;
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                // Só carrega os dados se tiver o token de autenticação
+                if (tokenAutenticacao) {
+                    carregarProdutos();
+                    escutarPedidosMesa();
+                }
             }
-            nomeCliente = input;
-            document.getElementById('display-nome').textContent = nomeCliente;
-            document.getElementById('nome-screen').style.display = 'none';
-        };
-
-        window.trocarNome = () => {
-            document.getElementById('nome-screen').style.display = 'flex';
-            document.getElementById('nome-input').value = '';
-            carrinho = [];
-            atualizarCarrinho();
-        };
+        });
 
         const showToast = (msg) => {
             toastMsgEl.textContent = msg;
@@ -234,10 +225,60 @@
                 snapshot.forEach(doc => {
                     produtos.push({ id: doc.id, ...doc.data() });
                 });
+                renderizarCategorias(); // Atualiza a barra de categorias
                 renderizarProdutos();
             }, (error) => {
                 console.error("Erro ao buscar produtos:", error);
                 loadingEl.innerHTML = "<p class='text-red-500 font-bold'>Erro ao carregar cardápio.</p>";
+            });
+        };
+
+        // --- SISTEMA DE CATEGORIAS ---
+        const renderizarCategorias = () => {
+            const container = document.getElementById('categorias-bar-container');
+            const barra = document.getElementById('categorias-bar');
+            
+            if (produtos.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            // Descobrir categorias únicas nos produtos existentes
+            const categoriasSet = new Set();
+            produtos.forEach(p => {
+                const cat = p.categoria ? p.categoria.trim() : 'Diversos';
+                categoriasSet.add(cat);
+            });
+
+            const categoriasUnicas = Array.from(categoriasSet).sort();
+
+            // Esconde a barra se houver apenas a categoria padrão (e.g. se ainda não adicionou no admin)
+            if (categoriasUnicas.length <= 1 && categoriasUnicas[0] === 'Diversos') {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+            }
+
+            barra.innerHTML = '';
+
+            // Estilos para os botões (Ativo vs Inativo)
+            const styleAtivo = 'bg-[#991b1b] text-white font-bold px-5 py-2 rounded-full text-sm shadow-md smooth-transition flex-shrink-0 border border-[#991b1b]';
+            const styleInativo = 'bg-white text-slate-600 font-medium px-5 py-2 rounded-full text-sm shadow-sm border border-[#EAE3D8] hover:bg-slate-50 smooth-transition flex-shrink-0';
+
+            // Criar Botão "Todas"
+            const btnTodas = document.createElement('button');
+            btnTodas.className = categoriaAtiva === 'Todas' ? styleAtivo : styleInativo;
+            btnTodas.textContent = 'Todas';
+            btnTodas.onclick = () => { categoriaAtiva = 'Todas'; renderizarCategorias(); renderizarProdutos(); };
+            barra.appendChild(btnTodas);
+
+            // Criar um botão para cada categoria dinâmica
+            categoriasUnicas.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = categoriaAtiva === cat ? styleAtivo : styleInativo;
+                btn.textContent = cat;
+                btn.onclick = () => { categoriaAtiva = cat; renderizarCategorias(); renderizarProdutos(); };
+                barra.appendChild(btn);
             });
         };
 
@@ -246,12 +287,17 @@
             produtosListEl.classList.remove('hidden');
             produtosListEl.innerHTML = '';
 
-            if (produtos.length === 0) {
-                produtosListEl.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 font-medium">Nenhum produto disponível no momento.</p>';
+            // Filtrar produtos com base na aba clicada
+            const produtosFiltrados = categoriaAtiva === 'Todas' 
+                ? produtos 
+                : produtos.filter(p => (p.categoria ? p.categoria.trim() : 'Diversos') === categoriaAtiva);
+
+            if (produtosFiltrados.length === 0) {
+                produtosListEl.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 font-medium">Nenhum produto disponível nesta categoria.</p>';
                 return;
             }
 
-            produtos.forEach(prod => {
+            produtosFiltrados.forEach(prod => {
                 const div = document.createElement('div');
                 const estoqueAtual = prod.estoque !== undefined ? prod.estoque : 0;
                 const semEstoque = estoqueAtual <= 0;
@@ -298,6 +344,7 @@
             
             showToast(`${produto.nome} adicionado!`);
             atualizarCarrinho();
+            renderizarModalPedido(); // Atualiza se modal estiver aberto
         };
 
         window.removerDoCarrinho = (idProduto) => {
@@ -319,17 +366,16 @@
 
             cartTotalEl.textContent = formatMoney(total);
             cartCountEl.textContent = `${qtd} item${qtd !== 1 ? 's' : ''}`;
+            headerCartCountEl.textContent = qtd;
 
             if (qtd > 0) {
                 cartBarEl.classList.remove('translate-y-full');
             } else {
                 cartBarEl.classList.add('translate-y-full');
-                fecharModalPedido();
             }
         };
 
         window.abrirModalPedido = () => {
-            if (carrinho.length === 0) return;
             renderizarModalPedido();
             document.getElementById('modal-pedido').classList.remove('hidden');
         };
@@ -344,22 +390,31 @@
             
             let total = 0;
 
+            if (carrinho.length === 0) {
+                modalItens.innerHTML = '<p class="text-center text-slate-500 py-6 font-medium">O seu carrinho está vazio.</p>';
+                document.getElementById('modal-total').textContent = 'R$ 0,00';
+                document.getElementById('btn-confirmar-pedido').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('btn-confirmar-pedido').style.display = 'flex';
+
             carrinho.forEach(item => {
                 total += item.produto.preco * item.quantidade;
                 const div = document.createElement('div');
-                div.className = 'py-3 flex justify-between items-center';
+                div.className = 'py-4 flex justify-between items-center';
                 div.innerHTML = `
-                    <div class="flex-1">
-                        <span class="font-bold text-slate-800">${item.produto.nome}</span>
-                        <div class="text-sm text-slate-500 font-medium mt-1">
-                            ${formatMoney(item.produto.preco)} <span class="mx-1">x</span> <span class="text-[#991b1b] font-bold">${item.quantidade}</span>
-                        </div>
+                    <div class="flex-1 pr-2">
+                        <span class="font-bold text-slate-800 text-sm sm:text-base leading-tight block mb-1">${item.produto.nome}</span>
+                        <span class="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">Valor unitário: ${formatMoney(item.produto.preco)}</span>
                     </div>
-                    <div class="flex items-center space-x-4">
+                    <div class="flex flex-col items-end space-y-2">
                         <span class="font-bold text-slate-800">${formatMoney(item.produto.preco * item.quantidade)}</span>
-                        <button onclick="removerDoCarrinho('${item.produto.id}')" class="text-slate-300 hover:text-red-500 p-2 smooth-transition bg-slate-50 rounded-full h-8 w-8 flex items-center justify-center">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <div class="flex items-center bg-[#FDFBF5] border border-[#EAE3D8] rounded-full px-1 py-0.5 shadow-sm">
+                            <button onclick="removerDoCarrinho('${item.produto.id}')" class="text-slate-500 hover:text-[#991b1b] w-7 h-7 flex items-center justify-center font-bold smooth-transition"><i class="fas fa-minus text-xs"></i></button>
+                            <span class="text-[#991b1b] font-bold px-3 text-sm">${item.quantidade}</span>
+                            <button onclick="adicionarAoCarrinho('${item.produto.id}')" class="text-slate-500 hover:text-[#991b1b] w-7 h-7 flex items-center justify-center font-bold smooth-transition"><i class="fas fa-plus text-xs"></i></button>
+                        </div>
                     </div>
                 `;
                 modalItens.appendChild(div);
@@ -442,6 +497,10 @@
             });
         };
 
+        window.fecharSucesso = () => {
+            document.getElementById('nome-screen').style.display = 'none';
+        };
+
         window.enviarPedido = async () => {
             if (!currentUser || carrinho.length === 0 || !nomeCliente) return;
 
@@ -501,8 +560,8 @@
                         </div>
 
                         <div class="flex flex-col space-y-3">
-                            <button onclick="location.reload()" class="w-full btn-primary font-bold py-3 rounded-xl shadow-md transition-colors">Fazer Novo Pedido</button>
-                            ${tokenAutenticacao ? `<button onclick="document.getElementById('nome-screen').style.display='none'; abrirModalHistorico();" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl shadow-sm transition-colors">Acompanhar Pedido</button>` : ''}
+                            <button onclick="fecharSucesso()" class="w-full btn-primary font-bold py-3 rounded-xl shadow-md transition-colors">Fazer Novo Pedido</button>
+                            <button onclick="fecharSucesso(); abrirModalHistorico();" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl shadow-sm transition-colors">Acompanhar Pedido</button>
                         </div>
                     </div>
                 `;
