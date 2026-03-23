@@ -49,7 +49,7 @@
                     <span id="display-nome" class="text-sm font-bold text-[#991b1b] bg-[#FDFBF5] border border-[#EAE3D8] px-2 py-1 rounded-md">Cliente --</span>
                 </div>
             </div>
-            <button onclick="trocarNome()" class="text-sm text-slate-500 hover:text-[#991b1b] underline font-medium smooth-transition">Alterar Nome</button>
+            <button id="btn-alterar-nome" onclick="trocarNome()" class="text-sm text-slate-500 hover:text-[#991b1b] underline font-medium smooth-transition">Alterar Nome</button>
         </div>
     </header>
 
@@ -107,7 +107,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCEdWqh3-vMqGdwvZ1sN7bJ_W27PRQtheI",
@@ -130,6 +130,7 @@
         let produtos = [];
         let carrinho = [];
         let nomeCliente = null;
+        let tokenAutenticacao = null;
 
         const produtosListEl = document.getElementById('produtos-list');
         const loadingEl = document.getElementById('loading');
@@ -155,11 +156,20 @@
             }
         });
 
-        // Verifica se o link já veio com a mesa/nome informada no QR Code
+        // Verifica se o link já veio com a mesa e o token informados no QR Code
         const urlParams = new URLSearchParams(window.location.search);
-        const nomeUrl = urlParams.get('nome') || urlParams.get('mesa');
+        const mesaUrl = urlParams.get('mesa');
+        const tokenUrl = urlParams.get('token');
+        const nomeUrl = urlParams.get('nome'); // Compatibilidade antiga
 
-        if (nomeUrl) {
+        if (mesaUrl) {
+            nomeCliente = `Mesa ${mesaUrl}`;
+            tokenAutenticacao = tokenUrl;
+            document.getElementById('nome-screen').style.display = 'none';
+            document.getElementById('display-nome').textContent = nomeCliente;
+            // Ocultar o botão "Alterar Nome" se for uma mesa oficial via QR
+            document.getElementById('btn-alterar-nome').style.display = 'none';
+        } else if (nomeUrl) {
             nomeCliente = nomeUrl;
             document.getElementById('nome-screen').style.display = 'none';
             document.getElementById('display-nome').textContent = nomeCliente;
@@ -221,14 +231,20 @@
 
             produtos.forEach(prod => {
                 const div = document.createElement('div');
-                div.className = 'bg-white p-5 rounded-xl shadow-sm card-product flex justify-between items-center';
+                const estoqueAtual = prod.estoque !== undefined ? prod.estoque : 0;
+                const semEstoque = estoqueAtual <= 0;
+                
+                const opacityClass = semEstoque ? 'opacity-60 grayscale' : '';
+                
+                div.className = `bg-white p-5 rounded-xl shadow-sm card-product flex justify-between items-center ${opacityClass}`;
                 div.innerHTML = `
-                    <div class="flex-1 pr-4">
+                    <div class="flex-1 pr-4 relative">
+                        ${semEstoque ? '<span class="inline-block mb-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Esgotado</span>' : ''}
                         <h3 class="font-serif font-bold text-slate-800 text-lg leading-tight mb-1">${prod.nome}</h3>
                         ${prod.descricao ? `<p class="text-xs text-slate-500 mb-3 leading-snug line-clamp-2">${prod.descricao}</p>` : ''}
                         <p class="text-[#991b1b] font-bold text-lg">${formatMoney(prod.preco)}</p>
                     </div>
-                    <button onclick="adicionarAoCarrinho('${prod.id}')" class="bg-[#FDFBF5] hover:bg-[#EAE3D8] text-[#991b1b] border border-[#EAE3D8] w-12 h-12 rounded-full flex justify-center items-center smooth-transition shrink-0 shadow-sm">
+                    <button onclick="adicionarAoCarrinho('${prod.id}')" class="bg-[#FDFBF5] hover:bg-[#EAE3D8] text-[#991b1b] border border-[#EAE3D8] w-12 h-12 rounded-full flex justify-center items-center smooth-transition shrink-0 shadow-sm ${semEstoque ? 'pointer-events-none' : ''}" ${semEstoque ? 'disabled' : ''}>
                         <i class="fas fa-plus text-lg"></i>
                     </button>
                 `;
@@ -240,8 +256,19 @@
             const produto = produtos.find(p => p.id === idProduto);
             if (!produto) return;
 
+            const estoqueMaximo = produto.estoque !== undefined ? produto.estoque : 0;
+            
+            if (estoqueMaximo <= 0) {
+                showToast("Produto esgotado!");
+                return;
+            }
+
             const itemExistente = carrinho.find(item => item.produto.id === idProduto);
             if (itemExistente) {
+                if (itemExistente.quantidade + 1 > estoqueMaximo) {
+                    showToast(`Apenas ${estoqueMaximo} unidades disponíveis!`);
+                    return;
+                }
                 itemExistente.quantidade += 1;
             } else {
                 carrinho.push({ produto: produto, quantidade: 1 });
@@ -337,6 +364,7 @@
 
             const novoPedido = {
                 cliente: nomeCliente,
+                tokenAutenticacao: tokenAutenticacao, // Guarda a prova de que usou o QR Code
                 itens: itensPedido,
                 total: total,
                 status: 'pendente',
@@ -346,6 +374,16 @@
             try {
                 const ref = collection(db, PATH_PEDIDOS);
                 await addDoc(ref, novoPedido);
+                
+                // Atualizar o estoque no banco de dados para cada item
+                for (const item of itensPedido) {
+                    const prodRef = doc(db, PATH_PRODUTOS, item.idProduto);
+                    const prodAtual = produtos.find(p => p.id === item.idProduto);
+                    if (prodAtual) {
+                        const novoEstoque = Math.max(0, (prodAtual.estoque || 0) - item.quantidade);
+                        await updateDoc(prodRef, { estoque: novoEstoque });
+                    }
+                }
                 
                 showToast("Pedido enviado para a cozinha!");
                 carrinho = [];
@@ -374,8 +412,10 @@
                 console.error("Erro ao enviar pedido:", error);
                 showToast("Erro ao enviar pedido. Tente novamente.");
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Confirmar Pedido';
+                if (document.body.contains(btn)) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Confirmar Pedido';
+                }
             }
         };
 
