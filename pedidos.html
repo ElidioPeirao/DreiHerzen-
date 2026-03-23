@@ -238,14 +238,17 @@
             const container = document.getElementById('categorias-bar-container');
             const barra = document.getElementById('categorias-bar');
             
-            if (produtos.length === 0) {
+            // Só considera para as abas os produtos que têm estoque maior que zero
+            const produtosComEstoque = produtos.filter(p => (p.estoque !== undefined ? p.estoque : 0) > 0);
+
+            if (produtosComEstoque.length === 0) {
                 container.classList.add('hidden');
                 return;
             }
 
-            // Descobrir categorias únicas nos produtos existentes
+            // Descobrir categorias únicas nos produtos com estoque
             const categoriasSet = new Set();
-            produtos.forEach(p => {
+            produtosComEstoque.forEach(p => {
                 const cat = p.categoria ? p.categoria.trim() : 'Diversos';
                 categoriasSet.add(cat);
             });
@@ -287,13 +290,15 @@
             produtosListEl.classList.remove('hidden');
             produtosListEl.innerHTML = '';
 
-            // Filtrar produtos com base na aba clicada
+            // Filtrar produtos com base na aba clicada E remover os sem estoque
+            const produtosComEstoque = produtos.filter(p => (p.estoque !== undefined ? p.estoque : 0) > 0);
+            
             const produtosFiltrados = categoriaAtiva === 'Todas' 
-                ? produtos 
-                : produtos.filter(p => (p.categoria ? p.categoria.trim() : 'Diversos') === categoriaAtiva);
+                ? produtosComEstoque 
+                : produtosComEstoque.filter(p => (p.categoria ? p.categoria.trim() : 'Diversos') === categoriaAtiva);
 
             if (produtosFiltrados.length === 0) {
-                produtosListEl.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 font-medium">Nenhum produto disponível nesta categoria.</p>';
+                produtosListEl.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 font-medium">Nenhum produto disponível nesta categoria no momento.</p>';
                 return;
             }
 
